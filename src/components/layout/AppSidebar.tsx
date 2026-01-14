@@ -7,6 +7,7 @@ import {
   FileSpreadsheet,
   TrendingUp,
   Users,
+  Bell,
   Settings,
   DollarSign,
   PieChart,
@@ -41,6 +42,7 @@ const adminNavItems = [
   { to: '/membership-fees', label: 'Cuotas de Socios', icon: DollarSign },
   { to: '/financial-ratios', label: 'Ratios Financieros', icon: PieChart },
   { to: '/users', label: 'Usuarios y Roles', icon: Users },
+  { to: '/notifications', label: 'Notificaciones', icon: Bell },
   { to: '/profile', label: 'Mi Perfil', icon: User },
   { to: '/settings', label: 'Configuración', icon: Settings },
 ];

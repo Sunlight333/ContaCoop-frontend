@@ -19,6 +19,7 @@ import MembershipFees from "./pages/MembershipFees";
 import FinancialRatios from "./pages/FinancialRatios";
 import DataUpload from "./pages/DataUpload";
 import Users from "./pages/Users";
+import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -44,6 +45,7 @@ const App = () => (
                   <Route path="/financial-ratios" element={<FinancialRatios />} />
                   <Route path="/upload" element={<DataUpload />} />
                   <Route path="/users" element={<Users />} />
+                  <Route path="/notifications" element={<Notifications />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="*" element={<NotFound />} />
