@@ -18,7 +18,8 @@ import {
   Loader2,
   X,
   Download,
-  HelpCircle
+  HelpCircle,
+  RefreshCw
 } from 'lucide-react';
 import {
   Tooltip,
@@ -28,7 +29,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { uploadApi } from '@/services/api';
+import { uploadApi, odooSyncApi, settingsApi } from '@/services/api';
 import { useCooperative } from '@/contexts/CooperativeContext';
 import { generateExcelTemplate } from '@/lib/excelTemplates';
 
@@ -90,11 +91,14 @@ export default function DataUpload() {
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
   const [uploadHistory, setUploadHistory] = useState<UploadHistoryItem[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [odooConnected, setOdooConnected] = useState(false);
+  const [isSyncingOdoo, setIsSyncingOdoo] = useState<Record<string, boolean>>({});
   const isMobile = useIsMobile();
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     fetchHistory();
+    checkOdooStatus();
   }, [selectedCooperative]);
 
   const fetchHistory = async () => {
@@ -106,6 +110,50 @@ export default function DataUpload() {
       console.error('Failed to fetch upload history:', error);
     } finally {
       setIsLoadingHistory(false);
+    }
+  };
+
+  const checkOdooStatus = async () => {
+    try {
+      const status = await settingsApi.getOdooStatus(selectedCooperative?.id);
+      setOdooConnected(status?.isConnected || false);
+    } catch (error) {
+      console.error('Failed to check Odoo status:', error);
+      setOdooConnected(false);
+    }
+  };
+
+  const handleSyncFromOdoo = async (moduleId: string) => {
+    setIsSyncingOdoo(prev => ({ ...prev, [moduleId]: true }));
+    try {
+      const year = Number(selectedYear);
+      const month = Number(selectedMonth);
+
+      let result;
+      switch (moduleId) {
+        case 'balance-sheet':
+          result = await odooSyncApi.syncBalanceSheet(year, month, selectedCooperative?.id);
+          break;
+        case 'cash-flow':
+          result = await odooSyncApi.syncCashFlow(year, month, selectedCooperative?.id);
+          break;
+        case 'membership-fees':
+          result = await odooSyncApi.syncMembershipFees(year, month, selectedCooperative?.id);
+          break;
+        default:
+          toast.error('Módulo no soportado para sincronización con Odoo');
+          return;
+      }
+
+      if (result) {
+        toast.success(`${result.recordsCount} registros sincronizados desde Odoo`);
+        await fetchHistory();
+      }
+    } catch (error: any) {
+      console.error('Odoo sync failed:', error);
+      toast.error(error?.message || 'Error al sincronizar con Odoo');
+    } finally {
+      setIsSyncingOdoo(prev => ({ ...prev, [moduleId]: false }));
     }
   };
 

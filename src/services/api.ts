@@ -589,6 +589,39 @@ export const settingsApi = {
   },
 };
 
+// ============================================
+// ODOO SYNC API
+// ============================================
+
+export const odooSyncApi = {
+  syncBalanceSheet: async (year: number, month: number, cooperativeId?: string) => {
+    const params = cooperativeId ? `?cooperativeId=${cooperativeId}` : '';
+    const response = await apiFetch<ApiResponse<{ recordsCount: number }>>(`/odoo/sync/balance-sheet${params}`, {
+      method: 'POST',
+      body: JSON.stringify({ year, month }),
+    });
+    return response.data;
+  },
+
+  syncCashFlow: async (year: number, month: number, cooperativeId?: string) => {
+    const params = cooperativeId ? `?cooperativeId=${cooperativeId}` : '';
+    const response = await apiFetch<ApiResponse<{ recordsCount: number }>>(`/odoo/sync/cash-flow${params}`, {
+      method: 'POST',
+      body: JSON.stringify({ year, month }),
+    });
+    return response.data;
+  },
+
+  syncMembershipFees: async (year: number, month: number, cooperativeId?: string) => {
+    const params = cooperativeId ? `?cooperativeId=${cooperativeId}` : '';
+    const response = await apiFetch<ApiResponse<{ recordsCount: number }>>(`/odoo/sync/membership-fees${params}`, {
+      method: 'POST',
+      body: JSON.stringify({ year, month }),
+    });
+    return response.data;
+  },
+};
+
 // Download helper for exports
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
