@@ -190,7 +190,7 @@ export default function Settings() {
     setIsExporting(true);
     try {
       const blob = await settingsApi.exportAllData(selectedCooperative?.id);
-      downloadBlob(blob, `datos-cooperativa-${new Date().toISOString().split('T')[0]}.xlsx`);
+      downloadBlob(blob, `datos-cooperativa-${new Date().toISOString().split('T')[0]}.json`);
       toast.success('Datos exportados exitosamente');
     } catch (error) {
       console.error('Export failed:', error);

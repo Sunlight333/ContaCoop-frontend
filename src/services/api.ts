@@ -585,7 +585,10 @@ export const settingsApi = {
   exportAllData: async (cooperativeId?: string) => {
     const params = cooperativeId ? `?cooperativeId=${cooperativeId}` : '';
     const response = await apiFetch<any>(`/settings/data/export${params}`);
-    return response;
+    // Convert JSON response to Blob for download
+    const jsonString = JSON.stringify(response, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    return blob;
   },
 };
 
