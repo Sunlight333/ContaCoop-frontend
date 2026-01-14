@@ -366,14 +366,14 @@ export default function Profile() {
 
         {/* Change Password Dialog */}
         <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
-          <DialogContent>
+          <DialogContent className="translate-no">
             <DialogHeader>
               <DialogTitle>Cambiar Contraseña</DialogTitle>
               <DialogDescription>
                 Ingresa tu contraseña actual y la nueva contraseña
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4" translate="no">
               <div className="space-y-2">
                 <Label htmlFor="current-password">Contraseña Actual</Label>
                 <div className="relative">
@@ -383,6 +383,8 @@ export default function Profile() {
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
                     placeholder="Ingresa tu contraseña actual"
+                    translate="no"
+                    autoComplete="current-password"
                   />
                   <Button
                     type="button"
@@ -404,6 +406,8 @@ export default function Profile() {
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                     placeholder="Ingresa tu nueva contraseña"
+                    translate="no"
+                    autoComplete="new-password"
                   />
                   <Button
                     type="button"
@@ -425,6 +429,8 @@ export default function Profile() {
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                     placeholder="Confirma tu nueva contraseña"
+                    translate="no"
+                    autoComplete="new-password"
                   />
                   <Button
                     type="button"
