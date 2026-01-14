@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sshpass -p 'NDSw222arle#' scp -o StrictHostKeyChecking=no socios-funds-update.tar.gz root@72.61.41.94:/tmp/)",
+      "Bash(tar:*)",
+      "Bash(scp:*)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}
