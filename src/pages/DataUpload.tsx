@@ -462,6 +462,29 @@ export default function DataUpload() {
                         Descargar plantilla de ejemplo
                       </Button>
 
+                      {/* Odoo sync button - only for supported modules */}
+                      {odooConnected && ['balance-sheet', 'cash-flow', 'membership-fees'].includes(module.id) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full h-7 text-xs text-primary hover:text-primary/80 justify-start px-2 font-medium"
+                          onClick={() => handleSyncFromOdoo(module.id)}
+                          disabled={isSyncingOdoo[module.id]}
+                        >
+                          {isSyncingOdoo[module.id] ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                              Sincronizando desde Odoo...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="h-3 w-3 mr-1.5" />
+                              Importar desde Odoo
+                            </>
+                          )}
+                        </Button>
+                      )}
+
                       <input
                         type="file"
                         ref={(el) => fileInputRefs.current[module.id] = el}
