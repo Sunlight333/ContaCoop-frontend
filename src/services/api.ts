@@ -544,7 +544,14 @@ export const settingsApi = {
 
   getOdooStatus: async (cooperativeId?: string) => {
     const params = cooperativeId ? `?cooperativeId=${cooperativeId}` : '';
-    const response = await apiFetch<ApiResponse<{ isConnected: boolean; lastSync: string | null }>>(`/settings/odoo/status${params}`);
+    const response = await apiFetch<ApiResponse<{
+      url?: string;
+      database?: string;
+      username?: string;
+      apiKey?: string;
+      isConnected: boolean;
+      lastSync: string | null;
+    }>>(`/settings/odoo/status${params}`);
     return response.data;
   },
 

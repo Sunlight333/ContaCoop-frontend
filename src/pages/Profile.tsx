@@ -183,7 +183,7 @@ export default function Profile() {
                       <SelectTrigger id="coop-select" className="flex-1">
                         <SelectValue placeholder="Selecciona una cooperativa" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent portal={false}>
                         {cooperatives.map((coop) => (
                           <SelectItem key={coop.id} value={coop.id}>
                             {coop.name}
@@ -249,7 +249,7 @@ export default function Profile() {
                           <SelectTrigger id="admin-coop-select" className="flex-1">
                             <SelectValue placeholder="Selecciona cooperativa" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent portal={false}>
                             {cooperatives.map((coop) => (
                               <SelectItem key={coop.id} value={coop.id}>
                                 {coop.name}
@@ -281,7 +281,7 @@ export default function Profile() {
                         <SelectTrigger id="year-select" className="flex-1">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent portal={false}>
                           {[2024, 2023, 2022, 2021, 2020].map((year) => (
                             <SelectItem key={year} value={year.toString()}>
                               {year}

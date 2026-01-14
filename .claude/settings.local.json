@@ -4,7 +4,15 @@
       "Bash(sshpass -p 'NDSw222arle#' scp -o StrictHostKeyChecking=no socios-funds-update.tar.gz root@72.61.41.94:/tmp/)",
       "Bash(tar:*)",
       "Bash(scp:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(sshpass -p \"Vpsrivel2511\" ssh -o StrictHostKeyChecking=no root@195.35.16.59 \"echo ''Connection successful!'' && cat /etc/os-release | grep PRETTY_NAME && uname -a\")",
+      "Bash(chmod:*)",
+      "Bash(python -c:*)",
+      "Bash(python deploy_to_vps.py:*)",
+      "Bash(python:*)",
+      "Bash(grep:*)",
+      "Bash(xargs -I {} sh -c \"echo ''=== {} ==='' && grep -n ''SelectContent'' {} | grep -v ''portal={false}'' | head -5\")",
+      "Bash(git add:*)"
     ]
   }
 }

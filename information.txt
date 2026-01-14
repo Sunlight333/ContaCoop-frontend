@@ -1,4 +1,0 @@
-  - Admin: admin@cooperative.com / admin123
-  - Socio: socio@cooperative.com / socio123
-
-  -------------- message -----------------

@@ -44,6 +44,15 @@ interface DataSettings {
   autoBackup: boolean;
 }
 
+interface OdooConfig {
+  url: string;
+  database: string;
+  username: string;
+  apiKey: string;
+  isConnected: boolean;
+  lastSync?: string;
+}
+
 export default function Settings() {
   const { selectedCooperative } = useCooperative();
   const [coopInfo, setCoopInfo] = useState<CooperativeInfo>({ name: '' });
@@ -62,6 +71,15 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [odooConfig, setOdooConfig] = useState<OdooConfig>({
+    url: '',
+    database: '',
+    username: '',
+    apiKey: '',
+    isConnected: false,
+  });
+  const [isTestingOdoo, setIsTestingOdoo] = useState(false);
+  const [isSavingOdoo, setIsSavingOdoo] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -70,9 +88,10 @@ export default function Settings() {
   const fetchSettings = async () => {
     setIsLoading(true);
     try {
-      const [settingsData, coopData] = await Promise.all([
+      const [settingsData, coopData, odooStatus] = await Promise.all([
         settingsApi.get(selectedCooperative?.id),
         cooperativeApi.getInfo(selectedCooperative?.id),
+        settingsApi.getOdooStatus(selectedCooperative?.id).catch(() => null),
       ]);
 
       if (settingsData) {
@@ -95,6 +114,17 @@ export default function Settings() {
           name: coopData.name || '',
           ruc: coopData.ruc || '',
           address: coopData.address || '',
+        });
+      }
+
+      if (odooStatus) {
+        setOdooConfig({
+          url: odooStatus.url || '',
+          database: odooStatus.database || '',
+          username: odooStatus.username || '',
+          apiKey: odooStatus.apiKey || '',
+          isConnected: odooStatus.isConnected || false,
+          lastSync: odooStatus.lastSync || undefined,
         });
       }
     } catch (error) {
@@ -169,6 +199,52 @@ export default function Settings() {
       setIsExporting(false);
     }
   };
+
+  const testOdooConnection = async () => {
+    setIsTestingOdoo(true);
+    try {
+      const result = await settingsApi.testOdooConnection({
+        url: odooConfig.url,
+        database: odooConfig.database,
+        username: odooConfig.username,
+        apiKey: odooConfig.apiKey,
+      });
+
+      if (result?.success) {
+        toast.success(result.message || 'Conexión exitosa con Odoo');
+        setOdooConfig({ ...odooConfig, isConnected: true });
+      } else {
+        toast.error(result?.message || 'Error al conectar con Odoo');
+        setOdooConfig({ ...odooConfig, isConnected: false });
+      }
+    } catch (error) {
+      console.error('Odoo connection test failed:', error);
+      toast.error('Error al probar conexión con Odoo');
+      setOdooConfig({ ...odooConfig, isConnected: false });
+    } finally {
+      setIsTestingOdoo(false);
+    }
+  };
+
+  const saveOdooConfig = async () => {
+    setIsSavingOdoo(true);
+    try {
+      await settingsApi.saveOdooConfig({
+        url: odooConfig.url,
+        database: odooConfig.database,
+        username: odooConfig.username,
+        apiKey: odooConfig.apiKey,
+      }, selectedCooperative?.id);
+      toast.success('Configuración de Odoo guardada exitosamente');
+      await fetchSettings(); // Refresh status
+    } catch (error) {
+      console.error('Failed to save Odoo config:', error);
+      toast.error('Error al guardar configuración de Odoo');
+    } finally {
+      setIsSavingOdoo(false);
+    }
+  };
+
   return (
     <AppLayout title="Configuración" subtitle="Configura las preferencias de la plataforma" requireAdmin>
       <div className="space-y-4 md:space-y-6">
@@ -367,19 +443,96 @@ export default function Settings() {
           </Card>
         </div>
 
-        {/* Integration Placeholder - Full Width */}
-        <Card className="border-dashed animate-slide-up" style={{ animationDelay: '0.25s' }}>
+        {/* Odoo Integration - Full Width */}
+        <Card className="animate-slide-up hover-lift animated-border" style={{ animationDelay: '0.25s' }}>
           <CardHeader className="pb-3 md:pb-4">
             <div className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-base md:text-lg font-heading text-muted-foreground">Integraciones</CardTitle>
+              <Globe className="h-5 w-5 text-primary" />
+              <CardTitle className="text-base md:text-lg font-heading">Integración con Odoo</CardTitle>
             </div>
-            <CardDescription className="text-xs md:text-sm">Conectar con servicios externos (próximamente)</CardDescription>
+            <CardDescription className="text-xs md:text-sm">Conectar con Odoo ERP para sincronizar datos contables</CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-xs md:text-sm text-muted-foreground">
-              Futuras integraciones con software contable, APIs bancarias y servicios de notificación estarán disponibles aquí.
-            </p>
+          <CardContent className="space-y-6">
+            {/* Connection Status */}
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "h-3 w-3 rounded-full",
+                  odooConfig.isConnected ? "bg-green-500 animate-pulse" : "bg-gray-300"
+                )}></div>
+                <div>
+                  <p className="font-medium text-sm">Estado de Conexión</p>
+                  <p className="text-xs text-muted-foreground">
+                    {odooConfig.isConnected ? 'Conectado' : 'No conectado'}
+                    {odooConfig.lastSync && ` - Última sincronización: ${new Date(odooConfig.lastSync).toLocaleString('es-CL')}`}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant={odooConfig.isConnected ? "outline" : "default"}
+                size="sm"
+                onClick={testOdooConnection}
+                disabled={isTestingOdoo || !odooConfig.url || !odooConfig.database}
+              >
+                <Loader2 className={cn("h-4 w-4 mr-2 animate-spin", isTestingOdoo ? "inline" : "hidden")} />
+                {isTestingOdoo ? 'Probando...' : 'Probar Conexión'}
+              </Button>
+            </div>
+
+            {/* Configuration Form */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">URL de Odoo</label>
+                <input
+                  type="url"
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  placeholder="https://odoo.ejemplo.com"
+                  value={odooConfig.url}
+                  onChange={(e) => setOdooConfig({ ...odooConfig, url: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Base de Datos</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  placeholder="nombre_bd"
+                  value={odooConfig.database}
+                  onChange={(e) => setOdooConfig({ ...odooConfig, database: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Usuario</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  placeholder="usuario@ejemplo.com"
+                  value={odooConfig.username}
+                  onChange={(e) => setOdooConfig({ ...odooConfig, username: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">API Key / Contraseña</label>
+                <input
+                  type="password"
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  placeholder="••••••••"
+                  value={odooConfig.apiKey}
+                  onChange={(e) => setOdooConfig({ ...odooConfig, apiKey: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={saveOdooConfig}
+                disabled={isSavingOdoo || !odooConfig.url || !odooConfig.database || !odooConfig.username || !odooConfig.apiKey}
+              >
+                <Loader2 className={cn("h-4 w-4 mr-2 animate-spin", isSavingOdoo ? "inline" : "hidden")} />
+                {isSavingOdoo ? 'Guardando...' : 'Guardar Configuración'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
