@@ -1,6 +1,6 @@
 # Deployment Guide - ContaCoop
 
-## Manual Deployment to VPS (146.190.235.111)
+## Manual Deployment to VPS (195.35.16.59)
 
 ### Prerequisites
 - SSH access to VPS as root
@@ -11,10 +11,10 @@
 
 ```bash
 # 1. SSH into VPS
-ssh root@146.190.235.111
+ssh root@195.35.16.59
 
 # 2. Navigate to frontend directory
-cd /var/www/ContaCoop
+cd /var/www/contacoop/frontend
 
 # 3. Pull latest changes from GitHub
 git pull origin master
@@ -39,10 +39,10 @@ systemctl status nginx
 
 ```bash
 # 1. SSH into VPS (if not already connected)
-ssh root@146.190.235.111
+ssh root@195.35.16.59
 
 # 2. Navigate to backend directory
-cd /var/www/ContaCoop/backend
+cd /var/www/contacoop/backend
 
 # 3. Pull latest changes
 git pull origin master
@@ -78,15 +78,16 @@ echo "🚀 Deploying ContaCoop..."
 
 # Frontend
 echo "📦 Deploying Frontend..."
-cd /var/www/ContaCoop
+cd /var/www/contacoop/frontend
 git pull origin master
 npm install
 npm run build
+systemctl reload nginx
 echo "✅ Frontend built"
 
 # Backend
 echo "📦 Deploying Backend..."
-cd /var/www/ContaCoop/backend
+cd /var/www/contacoop/backend
 git pull origin master
 npm install
 npm run build
@@ -151,9 +152,9 @@ After deployment, verify:
 
 3. **Database**:
    ```bash
-   cd /var/www/ContaCoop/backend
+   cd /var/www/contacoop/backend
    npx prisma studio
-   # Access at http://146.190.235.111:5555 (if port open)
+   # Access at http://195.35.16.59:5555 (if port open)
    ```
 
 ### Recent Changes (Commit f71f118)
