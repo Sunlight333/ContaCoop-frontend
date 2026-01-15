@@ -18,7 +18,12 @@
       "Bash(ssh root@195.35.16.59:*)",
       "Bash(curl:*)",
       "Bash(findstr:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(dir:*)",
+      "Bash(ssh root@146.190.235.111 \"cd /var/www/ContaCoop && git pull origin master && npm run build\")",
+      "Bash(ssh -o ConnectTimeout=10 root@146.190.235.111 \"cd /var/www/ContaCoop && git pull && npm run build\")",
+      "Bash(ping:*)",
+      "Bash(ssh -o StrictHostKeyChecking=no root@195.35.16.59 \"cd /var/www/ContaCoop && git pull origin master && npm install && npm run build\")"
     ]
   }
 }

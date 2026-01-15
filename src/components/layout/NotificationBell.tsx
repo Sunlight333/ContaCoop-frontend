@@ -110,7 +110,7 @@ export function NotificationBell() {
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen} modal={false}>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -130,7 +130,6 @@ export function NotificationBell() {
         className="w-80 p-0"
         align="end"
         sideOffset={8}
-        portal={false}
         onInteractOutside={(e) => {
           // Prevent closing when clicking on toast notifications
           const target = e.target as HTMLElement;
