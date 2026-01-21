@@ -485,7 +485,7 @@ export default function Settings() {
                 <label className="text-sm font-medium">URL de Odoo</label>
                 <input
                   type="url"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className="w-full px-3 py-2 border rounded-md text-sm bg-background text-foreground"
                   placeholder="https://odoo.ejemplo.com"
                   value={odooConfig.url}
                   onChange={(e) => setOdooConfig({ ...odooConfig, url: e.target.value })}
@@ -495,7 +495,7 @@ export default function Settings() {
                 <label className="text-sm font-medium">Base de Datos</label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className="w-full px-3 py-2 border rounded-md text-sm bg-background text-foreground"
                   placeholder="nombre_bd"
                   value={odooConfig.database}
                   onChange={(e) => setOdooConfig({ ...odooConfig, database: e.target.value })}
@@ -505,7 +505,7 @@ export default function Settings() {
                 <label className="text-sm font-medium">Usuario</label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className="w-full px-3 py-2 border rounded-md text-sm bg-background text-foreground"
                   placeholder="usuario@ejemplo.com"
                   value={odooConfig.username}
                   onChange={(e) => setOdooConfig({ ...odooConfig, username: e.target.value })}
@@ -515,7 +515,7 @@ export default function Settings() {
                 <label className="text-sm font-medium">API Key / Contraseña</label>
                 <input
                   type="password"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className="w-full px-3 py-2 border rounded-md text-sm bg-background text-foreground"
                   placeholder="••••••••"
                   value={odooConfig.apiKey}
                   onChange={(e) => setOdooConfig({ ...odooConfig, apiKey: e.target.value })}
