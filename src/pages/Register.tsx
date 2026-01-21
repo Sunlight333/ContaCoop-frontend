@@ -283,7 +283,7 @@ export default function Register() {
                       <SelectTrigger className="h-11">
                         <SelectValue placeholder="Selecciona el tipo" />
                       </SelectTrigger>
-                      <SelectContent portal={false}>
+                      <SelectContent>
                         {cooperativeTypes.map((type) => (
                           <SelectItem key={type.value} value={type.value}>
                             {type.label}

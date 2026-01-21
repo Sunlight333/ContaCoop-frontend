@@ -2,7 +2,7 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD
-    ? 'https://socio-founds-backend-production.up.railway.app/api'
+    ? 'https://www.contacoop.cl/api'
     : 'http://localhost:3001/api');
 
 // Token management
