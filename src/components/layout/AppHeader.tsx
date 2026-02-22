@@ -60,34 +60,31 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
       {/* Mobile Header - Two rows */}
       {isMobile ? (
         <div className="flex flex-col">
-          {/* Top row: Logo, Menu, Avatar */}
-          <div className="flex h-14 items-center justify-between px-4">
-            <div className="flex items-center gap-3">
-              {/* Mobile menu button */}
+          {/* Top row: Logo + Controls */}
+          <div className="flex h-14 items-center gap-2 px-3">
+            {/* Left: Menu + Logo (fixed) */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               {onMenuClick && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={onMenuClick}
-                  className="h-9 w-9"
+                  className="h-8 w-8"
                 >
                   <Menu className="h-5 w-5" />
                   <span className="sr-only">Abrir menú</span>
                 </Button>
               )}
-              {/* Logo */}
-              <div className="flex items-center gap-2">
-                <Building2 className="h-6 w-6 text-primary" />
-                <span className="font-heading text-base font-semibold text-foreground">
-                  ContaCoop
-                </span>
-              </div>
+              <Building2 className="h-5 w-5 text-primary" />
+              <span className="font-heading text-sm font-semibold text-foreground">
+                ContaCoop
+              </span>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Cooperative Selector - Compact (always show if cooperatives exist) */}
+            {/* Center: Selectors (flexible, can shrink) */}
+            <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
               {cooperatives.length > 0 && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 min-w-0">
                   <Select
                     value={selectedCooperative?.id || ''}
                     onValueChange={(value) => {
@@ -95,7 +92,7 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
                       if (coop) setSelectedCooperative(coop);
                     }}
                   >
-                    <SelectTrigger className="w-[90px] border-border bg-card h-8 text-xs">
+                    <SelectTrigger className="min-w-[70px] max-w-[100px] border-border bg-card h-8 text-xs">
                       <SelectValue placeholder="Coop" />
                     </SelectTrigger>
                     <SelectContent portal={false}>
@@ -110,17 +107,16 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-7 w-7 flex-shrink-0"
                       onClick={() => navigate('/settings')}
                       title="Crear nueva cooperativa"
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="h-3.5 w-3.5" />
                     </Button>
                   )}
                 </div>
               )}
 
-              {/* Period Selector - Compact */}
               <Select
                 value={`${selectedPeriod.year}-${selectedPeriod.month}`}
                 onValueChange={(value) => {
@@ -128,7 +124,7 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
                   setSelectedPeriod({ year, month });
                 }}
               >
-                <SelectTrigger className="w-[100px] border-border bg-card h-8 text-xs">
+                <SelectTrigger className="min-w-[80px] max-w-[110px] border-border bg-card h-8 text-xs">
                   <SelectValue placeholder="Período" />
                 </SelectTrigger>
                 <SelectContent portal={false}>
@@ -142,15 +138,16 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
 
-              {/* Notification Bell */}
+            {/* Right: Bell + Avatar (fixed) */}
+            <div className="flex items-center gap-1 flex-shrink-0">
               <NotificationBell />
 
-              {/* User Dropdown Menu - Mobile */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8 border-2 border-primary/20">
+                    <Avatar className="h-7 w-7 border-2 border-primary/20">
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
                         {user?.name ? getInitials(user.name) : 'U'}
                       </AvatarFallback>
@@ -184,7 +181,7 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
           </div>
 
           {/* Bottom row: Page title */}
-          <div className="px-4 pb-3">
+          <div className="px-3 pb-3">
             <h1 className="font-heading text-lg font-semibold text-foreground truncate">{title}</h1>
             {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
           </div>
