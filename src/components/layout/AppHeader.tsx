@@ -59,125 +59,130 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Mobile Header - Two rows */}
       {isMobile ? (
-        <div className="flex flex-col">
-          {/* Top row: Logo + Controls */}
-          <div className="flex h-14 items-center gap-2 px-3">
-            {/* Left: Menu + Logo (fixed) */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {onMenuClick && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onMenuClick}
-                  className="h-8 w-8"
-                >
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Abrir menú</span>
-                </Button>
-              )}
-              <Building2 className="h-5 w-5 text-primary" />
-              <span className="font-heading text-sm font-semibold text-foreground">
-                ContaCoop
-              </span>
-            </div>
-
-            {/* Center: Selectors (flexible, can shrink) */}
-            <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
-              {cooperatives.length > 0 && (
-                <div className="flex items-center gap-1 min-w-0">
-                  <Select
-                    value={selectedCooperative?.id || ''}
-                    onValueChange={(value) => {
-                      const coop = cooperatives.find(c => c.id === value);
-                      if (coop) setSelectedCooperative(coop);
-                    }}
-                  >
-                    <SelectTrigger className="min-w-[70px] max-w-[100px] border-border bg-card h-8 text-xs">
-                      <SelectValue placeholder="Coop" />
-                    </SelectTrigger>
-                    <SelectContent portal={false}>
-                      {cooperatives.map((coop) => (
-                        <SelectItem key={coop.id} value={coop.id}>
-                          {coop.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {isAdmin && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 flex-shrink-0"
-                      onClick={() => navigate('/settings')}
-                      title="Crear nueva cooperativa"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              <Select
-                value={`${selectedPeriod.year}-${selectedPeriod.month}`}
-                onValueChange={(value) => {
-                  const [year, month] = value.split('-').map(Number);
-                  setSelectedPeriod({ year, month });
-                }}
+        <div className="flex flex-col overflow-hidden">
+          {/* Top row */}
+          <div className="flex h-14 items-center px-2 overflow-hidden">
+            {/* Menu button */}
+            {onMenuClick && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onMenuClick}
+                className="h-8 w-8 flex-shrink-0"
               >
-                <SelectTrigger className="min-w-[80px] max-w-[110px] border-border bg-card h-8 text-xs">
-                  <SelectValue placeholder="Período" />
-                </SelectTrigger>
-                <SelectContent portal={false}>
-                  {availablePeriods.map((period) => (
-                    <SelectItem
-                      key={`${period.year}-${period.month}`}
-                      value={`${period.year}-${period.month}`}
-                    >
-                      {shortMonthNames[period.month - 1]} {period.year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Abrir menú</span>
+              </Button>
+            )}
 
-            {/* Right: Bell + Avatar (fixed) */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <NotificationBell />
+            {/* Logo icon (always visible) */}
+            <Building2 className="h-5 w-5 text-primary flex-shrink-0 ml-1" />
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                    <Avatar className="h-7 w-7 border-2 border-primary/20">
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
-                        {user?.name ? getInitials(user.name) : 'U'}
-                      </AvatarFallback>
-                    </Avatar>
+            {/* Logo text (hidden below 360px) */}
+            <span className="font-heading text-sm font-semibold text-foreground ml-1.5 mr-1 hidden min-[360px]:inline truncate flex-shrink min-w-0">
+              ContaCoop
+            </span>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Cooperative Selector */}
+            {cooperatives.length > 0 && (
+              <>
+                <Select
+                  value={selectedCooperative?.id || ''}
+                  onValueChange={(value) => {
+                    const coop = cooperatives.find(c => c.id === value);
+                    if (coop) setSelectedCooperative(coop);
+                  }}
+                >
+                  <SelectTrigger className="w-[90px] flex-shrink-0 border-border bg-card h-8 text-xs">
+                    <SelectValue placeholder="Coop" />
+                  </SelectTrigger>
+                  <SelectContent portal={false}>
+                    {cooperatives.map((coop) => (
+                      <SelectItem key={coop.id} value={coop.id}>
+                        {coop.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 flex-shrink-0"
+                    onClick={() => navigate('/settings')}
+                    title="Crear nueva cooperativa"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user?.name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Mi Perfil</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Configuración</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Cerrar Sesión</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                )}
+              </>
+            )}
+
+            {/* Period Selector */}
+            <Select
+              value={`${selectedPeriod.year}-${selectedPeriod.month}`}
+              onValueChange={(value) => {
+                const [year, month] = value.split('-').map(Number);
+                setSelectedPeriod({ year, month });
+              }}
+            >
+              <SelectTrigger className="w-[95px] flex-shrink-0 border-border bg-card h-8 text-xs ml-1.5">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent portal={false}>
+                {availablePeriods.map((period) => (
+                  <SelectItem
+                    key={`${period.year}-${period.month}`}
+                    value={`${period.year}-${period.month}`}
+                  >
+                    {shortMonthNames[period.month - 1]} {period.year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Bell */}
+            <div className="flex-shrink-0 ml-1">
+              <NotificationBell />
             </div>
+
+            {/* Avatar */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full flex-shrink-0">
+                  <Avatar className="h-7 w-7 border-2 border-primary/20">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
+                      {user?.name ? getInitials(user.name) : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user?.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Mi Perfil</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Configuración</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Cerrar Sesión</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Bottom row: Page title */}
