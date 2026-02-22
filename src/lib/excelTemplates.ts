@@ -102,6 +102,30 @@ const templateConfigs: Record<string, TemplateConfig> = {
       'Deje fecha_pago vacio si no hay pago',
     ],
   },
+  'users': {
+    sheetName: 'Usuarios',
+    title: 'Plantilla de Importacion de Usuarios',
+    columns: [
+      { header: 'Nombre Completo', key: 'nombre', width: 30, example: 'Juan Perez Garcia' },
+      { header: 'Correo Electronico', key: 'email', width: 30, example: 'juan.perez@cooperativa.com' },
+      { header: 'Rol', key: 'rol', width: 15, example: 'socio' },
+      { header: 'Contrasena', key: 'contrasena', width: 20, example: '' },
+    ],
+    sampleData: [
+      { nombre: 'Juan Perez Garcia', email: 'juan.perez@cooperativa.com', rol: 'socio', contrasena: '' },
+      { nombre: 'Maria Rodriguez Lopez', email: 'maria.rodriguez@cooperativa.com', rol: 'socio', contrasena: '' },
+      { nombre: 'Carlos Sanchez Mora', email: 'carlos.sanchez@cooperativa.com', rol: 'admin', contrasena: 'MiPassword123' },
+      { nombre: 'Ana Martinez Vega', email: 'ana.martinez@cooperativa.com', rol: 'socio', contrasena: '' },
+      { nombre: 'Pedro Gonzalez Ruiz', email: 'pedro.gonzalez@cooperativa.com', rol: 'socio', contrasena: '' },
+    ],
+    instructions: [
+      'Columna "nombre" es obligatoria',
+      'Columna "email" es obligatoria y debe ser unico',
+      'Roles validos: socio, admin (por defecto: socio)',
+      'Si no ingresa contrasena, se generara una automaticamente',
+      'Los emails duplicados seran omitidos',
+    ],
+  },
   'ratios': {
     sheetName: 'Ratios Financieros',
     title: 'Plantilla de Ratios Financieros',

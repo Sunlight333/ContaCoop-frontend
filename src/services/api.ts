@@ -401,6 +401,15 @@ export interface User {
   createdAt: string;
 }
 
+export interface BulkUserUploadResult {
+  status: 'success' | 'partial' | 'failed';
+  message: string;
+  recordsCount: number;
+  created: Array<{ name: string; email: string; temporaryPassword: string }>;
+  skipped: Array<{ row: number; email: string; reason: string }>;
+  errors: Array<{ row: number; email: string; reason: string }>;
+}
+
 export const userApi = {
   getAll: async (search?: string, cooperativeId?: string): Promise<User[]> => {
     const params = new URLSearchParams();
@@ -448,6 +457,31 @@ export const userApi = {
       body: JSON.stringify({ cooperativeId }),
     });
     return response.data;
+  },
+
+  bulkImport: async (file: File, cooperativeId?: string): Promise<BulkUserUploadResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (cooperativeId) formData.append('cooperativeId', cooperativeId);
+
+    const headers: HeadersInit = {};
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/upload/users`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(error.error || `HTTP error ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data;
   },
 };
 

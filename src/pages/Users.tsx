@@ -39,12 +39,16 @@ import {
   EyeOff,
   Copy,
   Check,
-  Building2
+  Building2,
+  Upload,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { userApi, cooperativeApi, Cooperative } from '@/services/api';
+import { userApi, cooperativeApi, Cooperative, BulkUserUploadResult } from '@/services/api';
 import { useCooperative } from '@/contexts/CooperativeContext';
+import { generateExcelTemplate } from '@/lib/excelTemplates';
 
 interface UserData {
   id: string;
@@ -73,6 +77,11 @@ export default function Users() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserName, setSelectedUserName] = useState('');
   const [targetCooperativeId, setTargetCooperativeId] = useState('');
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<BulkUserUploadResult | null>(null);
+  const [bulkCopied, setBulkCopied] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -225,6 +234,57 @@ export default function Users() {
       console.error('Failed to reset password:', error);
       toast.error('Error al restablecer la contraseña');
     }
+  };
+
+  const handleDownloadUserTemplate = () => {
+    try {
+      generateExcelTemplate('users');
+      toast.success('Plantilla de usuarios descargada');
+    } catch (error) {
+      toast.error('Error al generar la plantilla');
+    }
+  };
+
+  const handleBulkFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+        toast.error('Por favor seleccione un archivo Excel (.xlsx, .xls) o CSV');
+        return;
+      }
+      setBulkFile(file);
+      setUploadResult(null);
+    }
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkFile) return;
+    setIsUploading(true);
+    try {
+      const result = await userApi.bulkImport(bulkFile, selectedCooperative?.id);
+      setUploadResult(result);
+      if (result.created.length > 0) {
+        toast.success(result.message);
+        fetchUsers();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Error al importar usuarios');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleCopyAllCredentials = () => {
+    if (!uploadResult) return;
+    const text = uploadResult.created
+      .map(u => `${u.name}\t${u.email}\t${u.temporaryPassword}`)
+      .join('\n');
+    navigator.clipboard.writeText(text);
+    setBulkCopied(true);
+    toast.success('Credenciales copiadas al portapapeles');
+    setTimeout(() => setBulkCopied(false), 2000);
   };
 
   const columns = [
@@ -390,11 +450,20 @@ export default function Users() {
                 />
               </div>
 
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={handleDownloadUserTemplate}>
+                  <Download className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Descargar </span>Plantilla
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setIsBulkUploadOpen(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Importar </span>Usuarios
+                </Button>
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button size="sm">
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Agregar Usuario
+                    <span className="hidden sm:inline">Agregar </span>Usuario
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -503,6 +572,8 @@ export default function Users() {
                 </DialogContent>
               </Dialog>
 
+              </div>
+
               {/* Credentials Dialog */}
               <Dialog open={!!createdUserInfo} onOpenChange={() => setCreatedUserInfo(null)}>
                 <DialogContent>
@@ -550,6 +621,149 @@ export default function Users() {
                     <Button onClick={() => setCreatedUserInfo(null)}>
                       Cerrar
                     </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Bulk Import Dialog */}
+              <Dialog open={isBulkUploadOpen} onOpenChange={(open) => {
+                setIsBulkUploadOpen(open);
+                if (!open) { setBulkFile(null); setUploadResult(null); }
+              }}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <FileSpreadsheet className="h-5 w-5" />
+                      Importar Usuarios desde Excel
+                    </DialogTitle>
+                    <DialogDescription>
+                      Cargue un archivo Excel con los datos de los usuarios a crear
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 py-4">
+                    <Button variant="ghost" size="sm" onClick={handleDownloadUserTemplate} className="text-primary">
+                      <Download className="h-4 w-4 mr-2" />
+                      Descargar plantilla de ejemplo
+                    </Button>
+
+                    {/* File selection */}
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                      {bulkFile ? (
+                        <div className="flex items-center justify-center gap-3">
+                          <FileSpreadsheet className="h-8 w-8 text-primary" />
+                          <div className="text-left">
+                            <p className="font-medium text-sm">{bulkFile.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(bulkFile.size / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => { setBulkFile(null); setUploadResult(null); }}>
+                            Cambiar
+                          </Button>
+                        </div>
+                      ) : (
+                        <label className="cursor-pointer">
+                          <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-sm font-medium">Seleccionar archivo</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Formatos aceptados: .xlsx, .xls, .csv
+                          </p>
+                          <input
+                            type="file"
+                            accept=".xlsx,.xls,.csv"
+                            onChange={handleBulkFileSelect}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+
+                    {/* Upload results */}
+                    {uploadResult && (
+                      <div className="space-y-3">
+                        {/* Summary */}
+                        <div className={cn(
+                          'rounded-lg border p-3 text-sm',
+                          uploadResult.status === 'success' ? 'border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-800' :
+                          uploadResult.status === 'partial' ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800' :
+                          'border-destructive/30 bg-destructive/5'
+                        )}>
+                          <p className="font-medium">{uploadResult.message}</p>
+                        </div>
+
+                        {/* Created users */}
+                        {uploadResult.created.length > 0 && (
+                          <div className="rounded-lg border border-green-300 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 p-4">
+                            <h4 className="font-medium text-sm text-green-700 dark:text-green-400 mb-2">
+                              Usuarios creados ({uploadResult.created.length})
+                            </h4>
+                            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                              {uploadResult.created.map((user, i) => (
+                                <div key={i} className="flex items-center justify-between text-xs gap-2">
+                                  <span className="truncate">{user.name} ({user.email})</span>
+                                  <span className="font-mono text-primary flex-shrink-0">{user.temporaryPassword}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <Button variant="outline" size="sm" className="mt-3 w-full" onClick={handleCopyAllCredentials}>
+                              {bulkCopied ? (
+                                <><Check className="h-3.5 w-3.5 mr-1.5" /> Copiado</>
+                              ) : (
+                                <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar todas las credenciales</>
+                              )}
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Skipped rows */}
+                        {uploadResult.skipped.length > 0 && (
+                          <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+                            <h4 className="font-medium text-sm text-amber-700 dark:text-amber-400 mb-2">
+                              Omitidos ({uploadResult.skipped.length})
+                            </h4>
+                            <div className="space-y-1 max-h-32 overflow-y-auto">
+                              {uploadResult.skipped.map((s, i) => (
+                                <p key={i} className="text-xs text-muted-foreground">
+                                  Fila {s.row}: {s.email} - {s.reason}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Errors */}
+                        {uploadResult.errors.length > 0 && (
+                          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                            <h4 className="font-medium text-sm text-destructive mb-2">
+                              Errores ({uploadResult.errors.length})
+                            </h4>
+                            <div className="space-y-1 max-h-32 overflow-y-auto">
+                              {uploadResult.errors.map((e, i) => (
+                                <p key={i} className="text-xs text-muted-foreground">
+                                  Fila {e.row}: {e.email || 'sin email'} - {e.reason}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsBulkUploadOpen(false)}>
+                      {uploadResult ? 'Cerrar' : 'Cancelar'}
+                    </Button>
+                    {!uploadResult && (
+                      <Button onClick={handleBulkUpload} disabled={!bulkFile || isUploading}>
+                        {isUploading ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Importando...</>
+                        ) : (
+                          <><Upload className="h-4 w-4 mr-2" /> Importar Usuarios</>
+                        )}
+                      </Button>
+                    )}
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
