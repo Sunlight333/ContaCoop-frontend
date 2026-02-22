@@ -8,6 +8,15 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
   Building2,
   Bell,
   Shield,
@@ -16,7 +25,9 @@ import {
   Globe,
   Mail,
   Loader2,
-  Palette
+  Palette,
+  Plus,
+  Check
 } from 'lucide-react';
 import { settingsApi, cooperativeApi, downloadBlob } from '@/services/api';
 import { useCooperative } from '@/contexts/CooperativeContext';
@@ -49,12 +60,18 @@ interface OdooConfig {
   database: string;
   username: string;
   apiKey: string;
+  companyId?: number;
   isConnected: boolean;
   lastSync?: string;
 }
 
+interface OdooCompany {
+  id: number;
+  name: string;
+}
+
 export default function Settings() {
-  const { selectedCooperative } = useCooperative();
+  const { selectedCooperative, refreshCooperatives } = useCooperative();
   const [coopInfo, setCoopInfo] = useState<CooperativeInfo>({ name: '' });
   const [notifications, setNotifications] = useState<NotificationSettings>({
     emailNotifications: true,
@@ -80,6 +97,11 @@ export default function Settings() {
   });
   const [isTestingOdoo, setIsTestingOdoo] = useState(false);
   const [isSavingOdoo, setIsSavingOdoo] = useState(false);
+  const [odooCompanies, setOdooCompanies] = useState<OdooCompany[]>([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
+  const [isCreateCoopOpen, setIsCreateCoopOpen] = useState(false);
+  const [isCreatingCoop, setIsCreatingCoop] = useState(false);
+  const [newCoop, setNewCoop] = useState({ name: '', ruc: '', address: '', phone: '', email: '' });
 
   useEffect(() => {
     fetchSettings();
@@ -123,6 +145,7 @@ export default function Settings() {
           database: odooStatus.database || '',
           username: odooStatus.username || '',
           apiKey: odooStatus.apiKey || '',
+          companyId: odooStatus.companyId || undefined,
           isConnected: odooStatus.isConnected || false,
           lastSync: odooStatus.lastSync || undefined,
         });
@@ -213,16 +236,65 @@ export default function Settings() {
       if (result?.success) {
         toast.success(result.message || 'Conexión exitosa con Odoo');
         setOdooConfig({ ...odooConfig, isConnected: true });
+        // Fetch available companies after successful connection
+        fetchOdooCompanies();
       } else {
         toast.error(result?.message || 'Error al conectar con Odoo');
         setOdooConfig({ ...odooConfig, isConnected: false });
+        setOdooCompanies([]);
       }
     } catch (error) {
       console.error('Odoo connection test failed:', error);
       toast.error('Error al probar conexión con Odoo');
       setOdooConfig({ ...odooConfig, isConnected: false });
+      setOdooCompanies([]);
     } finally {
       setIsTestingOdoo(false);
+    }
+  };
+
+  const fetchOdooCompanies = async () => {
+    if (!odooConfig.url || !odooConfig.database || !odooConfig.username || !odooConfig.apiKey) return;
+    setIsLoadingCompanies(true);
+    try {
+      const companies = await settingsApi.getOdooCompanies({
+        url: odooConfig.url,
+        database: odooConfig.database,
+        username: odooConfig.username,
+        apiKey: odooConfig.apiKey,
+      });
+      setOdooCompanies(companies || []);
+    } catch (error) {
+      console.error('Failed to fetch Odoo companies:', error);
+      setOdooCompanies([]);
+    } finally {
+      setIsLoadingCompanies(false);
+    }
+  };
+
+  const handleCreateCooperative = async () => {
+    if (!newCoop.name) {
+      toast.error('El nombre de la cooperativa es obligatorio');
+      return;
+    }
+    setIsCreatingCoop(true);
+    try {
+      await cooperativeApi.create({
+        name: newCoop.name,
+        ruc: newCoop.ruc || undefined,
+        address: newCoop.address || undefined,
+        phone: newCoop.phone || undefined,
+        email: newCoop.email || undefined,
+      });
+      toast.success('Cooperativa creada exitosamente');
+      setNewCoop({ name: '', ruc: '', address: '', phone: '', email: '' });
+      setIsCreateCoopOpen(false);
+      refreshCooperatives();
+    } catch (error: any) {
+      console.error('Failed to create cooperative:', error);
+      toast.error(error.message || 'Error al crear la cooperativa');
+    } finally {
+      setIsCreatingCoop(false);
     }
   };
 
@@ -234,6 +306,7 @@ export default function Settings() {
         database: odooConfig.database,
         username: odooConfig.username,
         apiKey: odooConfig.apiKey,
+        companyId: odooConfig.companyId,
       }, selectedCooperative?.id);
       toast.success('Configuración de Odoo guardada exitosamente');
       await fetchSettings(); // Refresh status
@@ -299,6 +372,103 @@ export default function Settings() {
                 <Loader2 className={cn("h-4 w-4 mr-2 animate-spin", isSaving ? "inline" : "hidden")} />
                 <span>{isSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Create New Cooperative */}
+          <Card className="animate-slide-up hover-lift animated-border" style={{ animationDelay: '0.025s' }}>
+            <CardHeader className="pb-3 md:pb-4">
+              <div className="flex items-center gap-2">
+                <Plus className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base md:text-lg font-heading">Nueva Cooperativa</CardTitle>
+              </div>
+              <CardDescription className="text-xs md:text-sm">Crear una nueva cooperativa en el sistema</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Dialog open={isCreateCoopOpen} onOpenChange={setIsCreateCoopOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full transition-all duration-300 hover:scale-105">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear Nueva Cooperativa
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Crear Nueva Cooperativa</DialogTitle>
+                    <DialogDescription>
+                      Complete los datos para registrar una nueva cooperativa en el sistema
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-coop-name">Nombre de la Cooperativa *</Label>
+                      <Input
+                        id="new-coop-name"
+                        value={newCoop.name}
+                        onChange={(e) => setNewCoop({ ...newCoop, name: e.target.value })}
+                        placeholder="Cooperativa de Ahorro y Crédito..."
+                      />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="new-coop-ruc">RUC / Registro</Label>
+                        <Input
+                          id="new-coop-ruc"
+                          value={newCoop.ruc}
+                          onChange={(e) => setNewCoop({ ...newCoop, ruc: e.target.value })}
+                          placeholder="12345678901"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-coop-phone">Teléfono</Label>
+                        <Input
+                          id="new-coop-phone"
+                          value={newCoop.phone}
+                          onChange={(e) => setNewCoop({ ...newCoop, phone: e.target.value })}
+                          placeholder="+56 9 1234 5678"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-coop-email">Correo Electrónico</Label>
+                      <Input
+                        id="new-coop-email"
+                        type="email"
+                        value={newCoop.email}
+                        onChange={(e) => setNewCoop({ ...newCoop, email: e.target.value })}
+                        placeholder="contacto@cooperativa.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-coop-address">Dirección</Label>
+                      <Input
+                        id="new-coop-address"
+                        value={newCoop.address}
+                        onChange={(e) => setNewCoop({ ...newCoop, address: e.target.value })}
+                        placeholder="Av. Ejemplo 123, Ciudad"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsCreateCoopOpen(false)} disabled={isCreatingCoop}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleCreateCooperative} disabled={isCreatingCoop || !newCoop.name}>
+                      {isCreatingCoop ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Creando...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          Crear Cooperativa
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
 
@@ -454,23 +624,24 @@ export default function Settings() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Connection Status */}
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border rounded-lg">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className={cn(
-                  "h-3 w-3 rounded-full",
+                  "h-3 w-3 rounded-full flex-shrink-0",
                   odooConfig.isConnected ? "bg-green-500 animate-pulse" : "bg-gray-300"
                 )}></div>
-                <div>
+                <div className="min-w-0">
                   <p className="font-medium text-sm">Estado de Conexión</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate">
                     {odooConfig.isConnected ? 'Conectado' : 'No conectado'}
-                    {odooConfig.lastSync && ` - Última sincronización: ${new Date(odooConfig.lastSync).toLocaleString('es-CL')}`}
+                    {odooConfig.lastSync && ` - Última sync: ${new Date(odooConfig.lastSync).toLocaleString('es-CL')}`}
                   </p>
                 </div>
               </div>
               <Button
                 variant={odooConfig.isConnected ? "outline" : "default"}
                 size="sm"
+                className="flex-shrink-0 w-full sm:w-auto"
                 onClick={testOdooConnection}
                 disabled={isTestingOdoo || !odooConfig.url || !odooConfig.database}
               >
@@ -523,9 +694,56 @@ export default function Settings() {
               </div>
             </div>
 
+            {/* Company Selector */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Empresa en Odoo</label>
+                {odooCompanies.length === 0 && odooConfig.url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchOdooCompanies}
+                    disabled={isLoadingCompanies || !odooConfig.url || !odooConfig.database || !odooConfig.username || !odooConfig.apiKey}
+                    className="text-xs h-7"
+                  >
+                    <Loader2 className={cn("h-3 w-3 mr-1 animate-spin", isLoadingCompanies ? "inline" : "hidden")} />
+                    {isLoadingCompanies ? 'Cargando...' : 'Cargar empresas'}
+                  </Button>
+                )}
+              </div>
+              {odooCompanies.length > 0 ? (
+                <select
+                  className="w-full px-3 py-2 border rounded-md text-sm bg-background text-foreground"
+                  value={odooConfig.companyId || ''}
+                  onChange={(e) => setOdooConfig({ ...odooConfig, companyId: e.target.value ? Number(e.target.value) : undefined })}
+                >
+                  <option value="">Seleccionar empresa...</option>
+                  {odooCompanies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name} (ID: {company.id})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border rounded-md text-sm bg-background text-foreground"
+                    placeholder="ID de empresa en Odoo (ej: 1)"
+                    value={odooConfig.companyId || ''}
+                    onChange={(e) => setOdooConfig({ ...odooConfig, companyId: e.target.value ? Number(e.target.value) : undefined })}
+                  />
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Selecciona la empresa de Odoo asociada a esta cooperativa. Prueba la conexión primero para cargar las empresas disponibles.
+              </p>
+            </div>
+
             {/* Save Button */}
             <div className="flex justify-end">
               <Button
+                className="w-full sm:w-auto"
                 onClick={saveOdooConfig}
                 disabled={isSavingOdoo || !odooConfig.url || !odooConfig.database || !odooConfig.username || !odooConfig.apiKey}
               >

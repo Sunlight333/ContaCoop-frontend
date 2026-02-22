@@ -38,11 +38,12 @@ import {
   Eye,
   EyeOff,
   Copy,
-  Check
+  Check,
+  Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { userApi } from '@/services/api';
+import { userApi, cooperativeApi, Cooperative } from '@/services/api';
 import { useCooperative } from '@/contexts/CooperativeContext';
 
 interface UserData {
@@ -53,6 +54,7 @@ interface UserData {
   role: 'admin' | 'socio';
   status: 'active' | 'inactive';
   lastLogin?: string;
+  cooperative?: { id: string; name: string } | null;
 }
 
 export default function Users() {
@@ -66,10 +68,19 @@ export default function Users() {
   const [showPassword, setShowPassword] = useState(false);
   const [createdUserInfo, setCreatedUserInfo] = useState<{ name: string; email: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [allCooperatives, setAllCooperatives] = useState<Cooperative[]>([]);
+  const [isCoopDialogOpen, setIsCoopDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserName, setSelectedUserName] = useState('');
+  const [targetCooperativeId, setTargetCooperativeId] = useState('');
 
   useEffect(() => {
     fetchUsers();
   }, [selectedCooperative, searchTerm]);
+
+  useEffect(() => {
+    cooperativeApi.getAll().then(setAllCooperatives).catch(() => {});
+  }, []);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -176,6 +187,29 @@ export default function Users() {
     }
   };
 
+  const handleChangeCooperative = async () => {
+    if (!selectedUserId || !targetCooperativeId) return;
+    try {
+      await userApi.changeCooperative(selectedUserId, targetCooperativeId);
+      const coopName = allCooperatives.find(c => c.id === targetCooperativeId)?.name;
+      toast.success(`${selectedUserName} asignado a ${coopName}`);
+      setIsCoopDialogOpen(false);
+      setSelectedUserId(null);
+      setTargetCooperativeId('');
+      fetchUsers();
+    } catch (error) {
+      console.error('Failed to change cooperative:', error);
+      toast.error('Error al cambiar la cooperativa del usuario');
+    }
+  };
+
+  const openCoopDialog = (userId: string, userName: string) => {
+    setSelectedUserId(userId);
+    setSelectedUserName(userName);
+    setTargetCooperativeId('');
+    setIsCoopDialogOpen(true);
+  };
+
   const handleResetPassword = async (userId: string, userName: string) => {
     try {
       const result = await userApi.resetPassword(userId);
@@ -237,6 +271,16 @@ export default function Users() {
       ),
     },
     {
+      key: 'cooperative',
+      header: 'Cooperativa',
+      cell: (user: UserData) => (
+        <div className="flex items-center gap-2">
+          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-sm">{user.cooperative?.name || 'Sin asignar'}</span>
+        </div>
+      ),
+    },
+    {
       key: 'lastLogin',
       header: 'Último Acceso',
       cell: (user: UserData) => (
@@ -260,6 +304,10 @@ export default function Users() {
             <DropdownMenuItem onClick={() => handleChangeRole(user.id, user.role === 'admin' ? 'socio' : 'admin')}>
               <Shield className="h-4 w-4 mr-2" />
               Cambiar a {user.role === 'admin' ? 'Socio' : 'Administrador'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openCoopDialog(user.id, user.name)}>
+              <Building2 className="h-4 w-4 mr-2" />
+              Asignar Cooperativa
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleResetPassword(user.id, user.name)}>
               <Key className="h-4 w-4 mr-2" />
@@ -514,7 +562,122 @@ export default function Users() {
           data={filteredUsers}
           columns={columns}
           emptyMessage="No se encontraron usuarios"
+          mobileCard={(user) => (
+            <Card className="animated-border">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={cn(
+                      'h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0',
+                      user.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                    )}>
+                      {user.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{user.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" portal={false}>
+                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleChangeRole(user.id, user.role === 'admin' ? 'socio' : 'admin')}>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Cambiar a {user.role === 'admin' ? 'Socio' : 'Administrador'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openCoopDialog(user.id, user.name)}>
+                        <Building2 className="h-4 w-4 mr-2" />
+                        Asignar Cooperativa
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleResetPassword(user.id, user.name)}>
+                        <Key className="h-4 w-4 mr-2" />
+                        Restablecer Contraseña
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleToggleStatus(user.id)}
+                        className={user.status === 'active' ? 'text-destructive focus:text-destructive' : ''}
+                      >
+                        <UserX className="h-4 w-4 mr-2" />
+                        {user.status === 'active' ? 'Desactivar' : 'Activar'}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <div className="flex items-center gap-1.5">
+                    {user.role === 'admin' ? (
+                      <Shield className="h-3.5 w-3.5 text-primary" />
+                    ) : (
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                    <span className="text-xs capitalize">{user.role === 'admin' ? 'Admin' : 'Socio'}</span>
+                  </div>
+                  <span className="text-muted-foreground">·</span>
+                  <StatusBadge
+                    status={user.status === 'active' ? 'success' : 'neutral'}
+                    label={user.status === 'active' ? 'Activo' : 'Inactivo'}
+                  />
+                  {user.cooperative?.name && (
+                    <>
+                      <span className="text-muted-foreground">·</span>
+                      <div className="flex items-center gap-1">
+                        <Building2 className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground truncate max-w-[120px]">{user.cooperative.name}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         />
+
+        {/* Assign Cooperative Dialog */}
+        <Dialog open={isCoopDialogOpen} onOpenChange={setIsCoopDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Asignar Cooperativa</DialogTitle>
+              <DialogDescription>
+                Seleccione la cooperativa a la que desea asignar a <strong>{selectedUserName}</strong>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Cooperativa</Label>
+                <Select value={targetCooperativeId} onValueChange={setTargetCooperativeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar cooperativa" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" sideOffset={4}>
+                    {allCooperatives.map((coop) => (
+                      <SelectItem key={coop.id} value={coop.id}>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          {coop.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCoopDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleChangeCooperative} disabled={!targetCooperativeId}>
+                Asignar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

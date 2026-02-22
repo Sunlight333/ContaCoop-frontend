@@ -30,12 +30,6 @@ import {
   Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  HeroDashboardPreview,
-  AnalyticsIllustration,
-  TeamIllustration,
-  FinanceIllustration,
-} from '@/components/illustrations/LandingIllustrations';
 
 // Animation variants
 const fadeInUp = {
@@ -366,10 +360,6 @@ export default function Landing() {
               <motion.div variants={fadeInUp} className="mt-8 flex flex-wrap items-center gap-6 justify-center lg:justify-start text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-success" />
-                  Sin tarjeta de crédito
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-success" />
                   Soporte en español
                 </div>
                 <div className="flex items-center gap-2">
@@ -379,14 +369,23 @@ export default function Landing() {
               </motion.div>
             </motion.div>
 
-            {/* Hero Dashboard Preview */}
+            {/* Hero Image */}
             <motion.div
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
               className="relative"
             >
-              <HeroDashboardPreview />
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border/50">
+                <img
+                  src="/OG.jpg"
+                  alt="ContaCoop - Plataforma Financiera Cooperativa"
+                  className="w-full h-auto object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none" />
+              </div>
+              {/* Decorative glow */}
+              <div className="absolute -z-10 -inset-4 bg-primary/10 rounded-3xl blur-2xl" />
             </motion.div>
           </div>
         </motion.div>
@@ -731,9 +730,9 @@ export default function Landing() {
 
             <div className="grid md:grid-cols-3 gap-8">
               {[
-                { icon: Building2, title: 'Registra tu Cooperativa', desc: 'Configura socios, roles administrativos y períodos financieros.' },
-                { icon: Upload, title: 'Carga tus Datos', desc: 'Importa información desde Excel usando nuestras plantillas prediseñadas.' },
-                { icon: BarChart3, title: 'Visualiza y Analiza', desc: 'Accede a reportes, gráficos y toma decisiones informadas.' },
+                { icon: Building2, title: 'Conecta tu Contabilidad', desc: 'Sincroniza automáticamente con Odoo o importa datos desde Excel.' },
+                { icon: Upload, title: 'Agiliza tu Gestión', desc: 'Automatiza reportes financieros, cuotas de socios y flujos de caja.' },
+                { icon: BarChart3, title: 'Toma Decisiones', desc: 'Accede a indicadores clave y reportes en tiempo real.' },
               ].map((step, index) => (
                 <motion.div key={index} variants={scaleIn} className="relative text-center">
                   <div className="relative inline-flex">
@@ -916,13 +915,18 @@ export default function Landing() {
             <p className="text-lg text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
               Únete a más de 150 cooperativas que ya confían en ContaCoop para gestionar sus finanzas.
             </p>
-            <div className="flex justify-center">
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link to="/login">
                 <Button size="lg" variant="secondary" className="w-full sm:w-auto gap-2 text-base">
                   Iniciar Sesión
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
+              <a href="mailto:info@contacoop.com">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto gap-2 text-base bg-white/20 border-white/50 text-white hover:bg-white/30">
+                  Contáctanos
+                </Button>
+              </a>
             </div>
             <p className="mt-6 text-sm text-primary-foreground/60">
               ¿Preguntas? Escríbenos a info@contacoop.com

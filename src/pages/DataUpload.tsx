@@ -40,7 +40,7 @@ const months = [
 
 const shortMonths = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-const years = ['2025', '2024', '2023', '2022'];
+const years = ['2026', '2025', '2024', '2023', '2022'];
 
 const uploadModules = [
   {
@@ -63,13 +63,6 @@ const uploadModules = [
     description: 'Contribuciones de los miembros',
     columns: ['id_socio', 'nombre_socio', 'email', 'tipo_cuota', 'monto_esperado', 'monto_pagado', 'fecha_pago', 'estado'],
     formatInfo: 'estado: pagado, parcial, pendiente, atrasado'
-  },
-  {
-    id: 'ratios',
-    name: 'Ratios Financieros',
-    description: 'Datos de ratios clave',
-    columns: ['nombre_ratio', 'valor', 'tendencia', 'descripcion'],
-    formatInfo: 'tendencia: up, down, stable'
   },
 ];
 
@@ -217,9 +210,6 @@ export default function DataUpload() {
         case 'membership-fees':
           result = await uploadApi.uploadMembershipFees(file, year, month, overwriteExisting, selectedCooperative?.id);
           break;
-        case 'ratios':
-          result = await uploadApi.uploadRatios(file, year, month, overwriteExisting, selectedCooperative?.id);
-          break;
       }
 
       setUploadStates(prev => ({ ...prev, [moduleId]: 'success' }));
@@ -309,33 +299,33 @@ export default function DataUpload() {
     <AppLayout title="Carga de Datos" subtitle="Importar archivos Excel para actualizar datos financieros" requireAdmin>
       <div className="space-y-4 md:space-y-6">
         {/* Period Selection */}
-        <Card className="animate-slide-up hover-lift animated-border">
+        <Card className="animate-slide-up">
           <CardHeader className="pb-2 md:pb-4">
             <CardTitle className="text-base md:text-lg font-heading">Seleccionar Período</CardTitle>
             <CardDescription className="text-xs md:text-sm">Elija el mes y año para la importación de datos</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-4">
-              <div className="space-y-2 flex-1 sm:flex-initial">
+              <div className="space-y-2 flex-1 sm:flex-initial relative">
                 <Label className="text-xs md:text-sm">Año</Label>
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <Select value={selectedYear} onValueChange={(val) => setSelectedYear(val)}>
                   <SelectTrigger className="w-full sm:w-[120px] h-9">
                     <SelectValue placeholder="Año" />
                   </SelectTrigger>
-                  <SelectContent portal={false}>
+                  <SelectContent position="popper" sideOffset={4} portal={false}>
                     {years.map((year) => (
                       <SelectItem key={year} value={year}>{year}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 flex-1 sm:flex-initial">
+              <div className="space-y-2 flex-1 sm:flex-initial relative">
                 <Label className="text-xs md:text-sm">Mes</Label>
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <Select value={selectedMonth} onValueChange={(val) => setSelectedMonth(val)}>
                   <SelectTrigger className="w-full sm:w-[140px] h-9">
                     <SelectValue placeholder="Mes" />
                   </SelectTrigger>
-                  <SelectContent portal={false}>
+                  <SelectContent position="popper" sideOffset={4} portal={false}>
                     {months.map((month, i) => (
                       <SelectItem key={month} value={String(i + 1)}>
                         <span className="hidden sm:inline">{month}</span>

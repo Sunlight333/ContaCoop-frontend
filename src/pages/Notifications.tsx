@@ -401,6 +401,29 @@ export default function Notifications() {
                 data={history}
                 columns={columns}
                 emptyMessage="No se han enviado notificaciones"
+                mobileCard={(item) => (
+                  <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{item.title}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.message}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span>{getRecipientTypeLabel(item.recipientType)}</span>
+                      <span>·</span>
+                      <span>{item.recipientCount} usuario(s)</span>
+                      <span>·</span>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatDate(item.createdAt)}
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Enviado por <span className="font-medium text-foreground">{item.senderName}</span>
+                    </p>
+                  </div>
+                )}
               />
             )}
           </CardContent>

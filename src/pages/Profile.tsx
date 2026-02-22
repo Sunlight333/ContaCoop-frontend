@@ -88,16 +88,16 @@ export default function Profile() {
         {/* Profile Header */}
         <Card className="animate-slide-up hover-lift animated-border">
           <CardContent className="pt-6">
-            <div className="flex items-start gap-6">
-              <Avatar className="h-20 w-20 border-4 border-primary/20">
-                <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-semibold">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-primary/20">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xl sm:text-2xl font-semibold">
                   {user?.name ? getInitials(user.name) : 'U'}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <h2 className="font-heading text-2xl font-bold text-foreground">{user?.name}</h2>
-                <p className="text-muted-foreground">{user?.email}</p>
-                <div className="flex items-center gap-2 mt-2">
+              <div className="flex-1 text-center sm:text-left">
+                <h2 className="font-heading text-xl sm:text-2xl font-bold text-foreground">{user?.name}</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">{user?.email}</p>
+                <div className="flex items-center justify-center sm:justify-start gap-2 mt-2 flex-wrap">
                   <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-full text-sm">
                     <Shield className="h-3 w-3 text-primary" />
                     <span className="capitalize text-primary font-medium">
@@ -310,17 +310,17 @@ export default function Profile() {
             <CardDescription>Gestiona tu contraseña y configuración de seguridad</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-muted p-2">
+                <div className="rounded-lg bg-muted p-2 flex-shrink-0">
                   <Key className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="font-medium">Contraseña</p>
-                  <p className="text-sm text-muted-foreground">Última modificación hace 30 días</p>
+                  <p className="font-medium text-sm sm:text-base">Contraseña</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Última modificación hace 30 días</p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setIsPasswordDialogOpen(true)}>
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setIsPasswordDialogOpen(true)}>
                 Cambiar Contraseña
               </Button>
             </div>

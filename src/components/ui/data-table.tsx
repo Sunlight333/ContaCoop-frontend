@@ -8,6 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Column<T> {
   key: keyof T | string;
@@ -15,6 +16,7 @@ interface Column<T> {
   cell?: (item: T) => React.ReactNode;
   className?: string;
   align?: 'left' | 'center' | 'right';
+  hideOnMobile?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -24,6 +26,7 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   stickyHeader?: boolean;
   compact?: boolean;
+  mobileCard?: (item: T) => React.ReactNode;
 }
 
 export function DataTable<T extends { id: string | number }>({
@@ -33,7 +36,10 @@ export function DataTable<T extends { id: string | number }>({
   emptyMessage = 'No data available',
   stickyHeader = false,
   compact = false,
+  mobileCard,
 }: DataTableProps<T>) {
+  const isMobile = useIsMobile();
+
   const getNestedValue = (obj: T, path: string): unknown => {
     return path.split('.').reduce((acc: unknown, part) => {
       if (acc && typeof acc === 'object') {
@@ -43,13 +49,37 @@ export function DataTable<T extends { id: string | number }>({
     }, obj);
   };
 
+  // Mobile card view
+  if (isMobile && mobileCard) {
+    return (
+      <div className={cn('space-y-3', className)}>
+        {data.length === 0 ? (
+          <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
+            {emptyMessage}
+          </div>
+        ) : (
+          data.map((item) => (
+            <div key={item.id}>
+              {mobileCard(item)}
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  // Filter columns that are hidden on mobile
+  const visibleColumns = isMobile
+    ? columns.filter((col) => !col.hideOnMobile)
+    : columns;
+
   return (
     <div className={cn('rounded-lg border border-border bg-card overflow-hidden', className)}>
       <div className={cn('overflow-auto scrollbar-thin', stickyHeader && 'max-h-[600px]')}>
         <Table>
           <TableHeader className={cn(stickyHeader && 'sticky top-0 bg-muted/50 backdrop-blur-sm z-10')}>
             <TableRow className="hover:bg-transparent">
-              {columns.map((column) => (
+              {visibleColumns.map((column) => (
                 <TableHead
                   key={String(column.key)}
                   className={cn(
@@ -69,7 +99,7 @@ export function DataTable<T extends { id: string | number }>({
             {data.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={visibleColumns.length}
                   className="h-32 text-center text-muted-foreground"
                 >
                   {emptyMessage}
@@ -78,7 +108,7 @@ export function DataTable<T extends { id: string | number }>({
             ) : (
               data.map((item) => (
                 <TableRow key={item.id} className="transition-colors">
-                  {columns.map((column) => (
+                  {visibleColumns.map((column) => (
                     <TableCell
                       key={`${item.id}-${String(column.key)}`}
                       className={cn(

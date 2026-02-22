@@ -175,6 +175,14 @@ export const cooperativeApi = {
     });
     return response.data;
   },
+
+  create: async (data: { name: string; ruc?: string; address?: string; phone?: string; email?: string }): Promise<Cooperative> => {
+    const response = await apiFetch<ApiResponse<Cooperative>>('/cooperatives', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  },
 };
 
 // ============================================
@@ -433,6 +441,14 @@ export const userApi = {
     });
     return response.data;
   },
+
+  changeCooperative: async (userId: string, cooperativeId: string) => {
+    const response = await apiFetch<ApiResponse<any>>(`/users/${userId}/cooperative`, {
+      method: 'PUT',
+      body: JSON.stringify({ cooperativeId }),
+    });
+    return response.data;
+  },
 };
 
 // ============================================
@@ -549,6 +565,7 @@ export const settingsApi = {
       database?: string;
       username?: string;
       apiKey?: string;
+      companyId?: number;
       isConnected: boolean;
       lastSync: string | null;
     }>>(`/settings/odoo/status${params}`);
@@ -560,6 +577,7 @@ export const settingsApi = {
     database: string;
     username: string;
     apiKey: string;
+    companyId?: number;
   }, cooperativeId?: string) => {
     const params = cooperativeId ? `?cooperativeId=${cooperativeId}` : '';
     const response = await apiFetch<ApiResponse<null>>(`/settings/odoo/config${params}`, {
@@ -576,6 +594,19 @@ export const settingsApi = {
     apiKey: string;
   }) => {
     const response = await apiFetch<ApiResponse<{ success: boolean; message: string }>>('/settings/odoo/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  },
+
+  getOdooCompanies: async (data: {
+    url: string;
+    database: string;
+    username: string;
+    apiKey: string;
+  }) => {
+    const response = await apiFetch<ApiResponse<{ id: number; name: string }[]>>('/settings/odoo/companies', {
       method: 'POST',
       body: JSON.stringify(data),
     });

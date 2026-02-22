@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DataTable } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { KPICard } from '@/components/ui/kpi-card';
-import { Download, Search, Filter, Users, DollarSign, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Download, Search, Filter, Users, AlertCircle, CheckCircle, Loader2, FileText } from 'lucide-react';
+import { exportToPdf } from '@/lib/pdf-export';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { financialApi, downloadBlob } from '@/services/api';
@@ -50,6 +50,7 @@ export default function MembershipFees() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,6 +104,24 @@ export default function MembershipFees() {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!selectedPeriod) return;
+    setIsExportingPdf(true);
+    try {
+      await exportToPdf('membership-fees-content', {
+        filename: `cuotas-socios-${selectedPeriod.year}-${selectedPeriod.month}`,
+        title: 'Cuotas de Socios',
+        subtitle: `${formatPeriod()} - ${selectedCooperative?.name || 'Cooperativa'}`,
+      });
+      toast.success('PDF exportado exitosamente');
+    } catch (error) {
+      console.error('PDF export failed:', error);
+      toast.error('Error al exportar el PDF');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -122,9 +141,6 @@ export default function MembershipFees() {
 
   // Data from API - filtering is done server-side
   const filteredData = feesData;
-
-  // Use summary from API
-  const { totalExpected, totalPaid, totalDebt, membersWithDebt } = summary;
 
   // Helper to check if status is up to date (handles both formats)
   const isUpToDate = (status: string) => status === 'up_to_date' || status === 'up-to-date';
@@ -340,38 +356,7 @@ export default function MembershipFees() {
 
   return (
     <AppLayout title="Cuotas de Socios" subtitle={`Seguimiento de contribuciones para ${formatPeriod()}`}>
-      <div className="space-y-4 md:space-y-6">
-        {/* Summary KPIs */}
-        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4 animate-stagger">
-          <KPICard
-            label="Total Esperado"
-            value={totalExpected}
-            format="currency"
-            icon={DollarSign}
-          />
-          <KPICard
-            label="Total Recaudado"
-            value={totalPaid}
-            previousValue={totalExpected}
-            format="currency"
-            trend={totalPaid >= totalExpected * 0.9 ? 'up' : 'down'}
-            icon={CheckCircle}
-          />
-          <KPICard
-            label="Deuda Pendiente"
-            value={totalDebt}
-            format="currency"
-            trend={totalDebt > 0 ? 'down' : 'stable'}
-            icon={AlertCircle}
-          />
-          <KPICard
-            label="Socios con Deuda"
-            value={membersWithDebt}
-            format="number"
-            icon={Users}
-          />
-        </div>
-
+      <div id="membership-fees-content" className="space-y-4 md:space-y-6">
         {/* Filters & Actions */}
         <Card className="animate-slide-up animated-border" style={{ animationDelay: '0.1s' }}>
           <CardContent className="py-3 md:py-4">
@@ -393,7 +378,7 @@ export default function MembershipFees() {
                       <Filter className="h-4 w-4 mr-2" />
                       <SelectValue placeholder="Estado" />
                     </SelectTrigger>
-                    <SelectContent portal={false}>
+                    <SelectContent position="popper" sideOffset={4}>
                       <SelectItem value="all">Todos</SelectItem>
                       <SelectItem value="up-to-date">Al Día</SelectItem>
                       <SelectItem value="with-debt">Con Deuda</SelectItem>
@@ -411,7 +396,21 @@ export default function MembershipFees() {
                     ) : (
                       <Download className="h-4 w-4 sm:mr-2" />
                     )}
-                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="hidden sm:inline">Excel</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3"
+                    onClick={handleExportPdf}
+                    disabled={isExportingPdf || isLoading}
+                  >
+                    {isExportingPdf ? (
+                      <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                    ) : (
+                      <FileText className="h-4 w-4 sm:mr-2" />
+                    )}
+                    <span className="hidden sm:inline">PDF</span>
                   </Button>
                 </div>
               </div>
@@ -446,39 +445,6 @@ export default function MembershipFees() {
           />
         )}
 
-        {/* Collection Progress */}
-        <Card className="animate-slide-up animated-border" style={{ animationDelay: '0.2s' }}>
-          <CardHeader className="pb-2 md:pb-4">
-            <CardTitle className="text-base md:text-lg font-heading">Progreso de Recaudación</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 md:space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs md:text-sm text-muted-foreground">Tasa de Recaudación</span>
-                  <span className="text-xs md:text-sm font-medium">{((totalPaid / totalExpected) * 100).toFixed(1)}%</span>
-                </div>
-                <div className="h-2 md:h-3 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all duration-500"
-                    style={{ width: `${(totalPaid / totalExpected) * 100}%` }}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs md:text-sm">
-                <span className="text-muted-foreground">
-                  {isMobile ? formatCurrencyCompact(totalPaid) : formatCurrency(totalPaid)} recaudado de {isMobile ? formatCurrencyCompact(totalExpected) : formatCurrency(totalExpected)}
-                </span>
-                <span className={cn(
-                  'font-medium',
-                  totalDebt > 0 ? 'text-destructive' : 'text-success'
-                )}>
-                  {isMobile ? formatCurrencyCompact(totalDebt) : formatCurrency(totalDebt)} pendiente
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </AppLayout>
   );

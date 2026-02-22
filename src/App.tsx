@@ -16,6 +16,7 @@ import Dashboard from "./pages/Dashboard";
 import BalanceSheet from "./pages/BalanceSheet";
 import CashFlow from "./pages/CashFlow";
 import MembershipFees from "./pages/MembershipFees";
+import CooperativeFees from "./pages/CooperativeFees";
 import FinancialRatios from "./pages/FinancialRatios";
 import DataUpload from "./pages/DataUpload";
 import Users from "./pages/Users";
@@ -42,6 +43,7 @@ const App = () => (
                   <Route path="/balance-sheet" element={<BalanceSheet />} />
                   <Route path="/cash-flow" element={<CashFlow />} />
                   <Route path="/membership-fees" element={<MembershipFees />} />
+                  <Route path="/cooperative-fees" element={<CooperativeFees />} />
                   <Route path="/financial-ratios" element={<FinancialRatios />} />
                   <Route path="/upload" element={<DataUpload />} />
                   <Route path="/users" element={<Users />} />

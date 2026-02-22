@@ -19,7 +19,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Menu, Building2, User, Settings, LogOut } from 'lucide-react';
+import { Calendar, Menu, Building2, User, Settings, LogOut, Plus } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { NotificationBell } from './NotificationBell';
 import { useNavigate } from 'react-router-dom';
@@ -87,24 +87,37 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
             <div className="flex items-center gap-2">
               {/* Cooperative Selector - Compact (always show if cooperatives exist) */}
               {cooperatives.length > 0 && (
-                <Select
-                  value={selectedCooperative?.id || ''}
-                  onValueChange={(value) => {
-                    const coop = cooperatives.find(c => c.id === value);
-                    if (coop) setSelectedCooperative(coop);
-                  }}
-                >
-                  <SelectTrigger className="w-[90px] border-border bg-card h-8 text-xs">
-                    <SelectValue placeholder="Coop" />
-                  </SelectTrigger>
-                  <SelectContent portal={false}>
-                    {cooperatives.map((coop) => (
-                      <SelectItem key={coop.id} value={coop.id}>
-                        {coop.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-1">
+                  <Select
+                    value={selectedCooperative?.id || ''}
+                    onValueChange={(value) => {
+                      const coop = cooperatives.find(c => c.id === value);
+                      if (coop) setSelectedCooperative(coop);
+                    }}
+                  >
+                    <SelectTrigger className="w-[90px] border-border bg-card h-8 text-xs">
+                      <SelectValue placeholder="Coop" />
+                    </SelectTrigger>
+                    <SelectContent portal={false}>
+                      {cooperatives.map((coop) => (
+                        <SelectItem key={coop.id} value={coop.id}>
+                          {coop.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => navigate('/settings')}
+                      title="Crear nueva cooperativa"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               )}
 
               {/* Period Selector - Compact */}
@@ -178,17 +191,17 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
         </div>
       ) : (
         /* Desktop Header - Single row */
-        <div className="flex h-16 items-center justify-between px-6">
-          <div className="min-w-0">
-            <h1 className="font-heading text-xl font-semibold text-foreground truncate">{title}</h1>
-            {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
+        <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
+          <div className="min-w-0 flex-shrink">
+            <h1 className="font-heading text-lg lg:text-xl font-semibold text-foreground truncate">{title}</h1>
+            {subtitle && <p className="text-xs lg:text-sm text-muted-foreground truncate">{subtitle}</p>}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0">
             {/* Cooperative Selector - Always show if cooperatives exist */}
             {cooperatives.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-1 lg:gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground hidden lg:block" />
                 <Select
                   value={selectedCooperative?.id || ''}
                   onValueChange={(value) => {
@@ -196,8 +209,8 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
                     if (coop) setSelectedCooperative(coop);
                   }}
                 >
-                  <SelectTrigger className="w-[200px] border-border bg-card h-9">
-                    <SelectValue placeholder="Seleccionar cooperativa" />
+                  <SelectTrigger className="w-[120px] lg:w-[200px] border-border bg-card h-9 text-xs lg:text-sm">
+                    <SelectValue placeholder="Cooperativa" />
                   </SelectTrigger>
                   <SelectContent portal={false}>
                     {cooperatives.map((coop) => (
@@ -207,12 +220,23 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
                     ))}
                   </SelectContent>
                 </Select>
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => navigate('/settings')}
+                    title="Crear nueva cooperativa"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             )}
 
             {/* Period Selector */}
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-1 lg:gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground hidden lg:block" />
               <Select
                 value={`${selectedPeriod.year}-${selectedPeriod.month}`}
                 onValueChange={(value) => {
@@ -220,8 +244,8 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
                   setSelectedPeriod({ year, month });
                 }}
               >
-                <SelectTrigger className="w-[180px] border-border bg-card h-9">
-                  <SelectValue placeholder="Seleccionar período" />
+                <SelectTrigger className="w-[120px] lg:w-[180px] border-border bg-card h-9 text-xs lg:text-sm">
+                  <SelectValue placeholder="Período" />
                 </SelectTrigger>
                 <SelectContent portal={false}>
                   {availablePeriods.map((period) => (
@@ -242,8 +266,8 @@ export function AppHeader({ title, subtitle, onMenuClick }: AppHeaderProps) {
             {/* User Dropdown Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-3 pl-4 border-l border-border hover:bg-accent">
-                  <div className="text-right">
+                <Button variant="ghost" className="flex items-center gap-2 lg:gap-3 pl-2 lg:pl-4 border-l border-border hover:bg-accent">
+                  <div className="text-right hidden lg:block">
                     <p className="text-sm font-medium text-foreground">{user?.name}</p>
                     <Badge
                       variant={isAdmin ? 'default' : 'secondary'}

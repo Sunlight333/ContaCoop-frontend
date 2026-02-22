@@ -1,8 +1,9 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { usePeriod } from '@/contexts/PeriodContext';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Loader2, Info } from 'lucide-react';
+import { Download, ChevronDown, ChevronRight, Loader2, FileText } from 'lucide-react';
+import { exportToPdf } from '@/lib/pdf-export';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useState, useEffect } from 'react';
@@ -24,6 +25,38 @@ interface BalanceEntry {
   finalCredit: number;
 }
 
+// Map subcategories to Odoo-like display names
+const subcategoryLabels: Record<string, string> = {
+  'current_assets': 'Activos corrientes',
+  'cash': 'Cuentas bancarias y de efectivo',
+  'receivable': 'Por cobrar',
+  'current': 'Activos corrientes',
+  'prepayments': 'Prepagos',
+  'fixed_assets': 'Activos adicionales fijos',
+  'non_current_assets': 'Activos adicionales no circulantes',
+  'current_liabilities': 'Pasivos corrientes',
+  'payable': 'Por pagar',
+  'non_current_liabilities': 'Pasivos adicionales no circulantes',
+  'retained_earnings': 'Ganancias sin asignar',
+  'capital': 'Capital',
+};
+
+function getSubcategoryLabel(sub?: string): string {
+  if (!sub) return '';
+  return subcategoryLabels[sub] || sub;
+}
+
+// Group entries by subcategory within a category
+function groupBySubcategory(entries: BalanceEntry[]): Record<string, BalanceEntry[]> {
+  const groups: Record<string, BalanceEntry[]> = {};
+  entries.forEach(entry => {
+    const key = entry.subcategory || 'other';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(entry);
+  });
+  return groups;
+}
+
 export default function BalanceSheet() {
   const { formatPeriod, selectedPeriod } = usePeriod();
   const { selectedCooperative } = useCooperative();
@@ -33,10 +66,12 @@ export default function BalanceSheet() {
     liabilities: true,
     equity: true,
   });
+  const [expandedSubcategories, setExpandedSubcategories] = useState<Record<string, boolean>>({});
   const [balanceData, setBalanceData] = useState<BalanceEntry[]>([]);
   const [summary, setSummary] = useState({ totalAssets: 0, totalLiabilities: 0, totalEquity: 0, isBalanced: true });
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,20 +116,28 @@ export default function BalanceSheet() {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-    }).format(value);
+  const handleExportPdf = async () => {
+    if (!selectedPeriod) return;
+    setIsExportingPdf(true);
+    try {
+      await exportToPdf('balance-sheet-content', {
+        filename: `balance-general-${selectedPeriod.year}-${selectedPeriod.month}`,
+        title: 'Balance General',
+        subtitle: `${formatPeriod()} - ${selectedCooperative?.name || 'Cooperativa'}`,
+      });
+      toast.success('PDF exportado exitosamente');
+    } catch (error) {
+      console.error('PDF export failed:', error);
+      toast.error('Error al exportar el PDF');
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
-  const formatCurrencyCompact = (value: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'USD',
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('es-CL', {
       minimumFractionDigits: 0,
-      notation: 'compact',
+      maximumFractionDigits: 0,
     }).format(value);
   };
 
@@ -103,138 +146,119 @@ export default function BalanceSheet() {
   const liabilityEntries = balanceData.filter(e => e.category === 'liabilities');
   const equityEntries = balanceData.filter(e => e.category === 'equity');
 
-  // Use summary from API
-  const { totalAssets, totalLiabilities, totalEquity, isBalanced } = summary;
+  const { totalAssets, totalLiabilities, totalEquity } = summary;
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Mobile card view for each entry
-  const MobileEntryCard = ({ entry }: { entry: BalanceEntry }) => {
-    const finalValue = entry.finalDebit > 0 ? entry.finalDebit : entry.finalCredit;
-    return (
-      <div className="py-3 border-b border-border last:border-0">
-        <div className="flex justify-between items-start gap-2 mb-1">
-          <span className="text-sm font-medium text-foreground">{entry.accountName}</span>
-          <span className="font-mono text-sm font-semibold text-foreground whitespace-nowrap">
-            {formatCurrencyCompact(finalValue)}
-          </span>
-        </div>
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{entry.accountCode}</span>
-          <span>{entry.subcategory}</span>
-        </div>
-      </div>
-    );
+  const toggleSubcategory = (key: string) => {
+    setExpandedSubcategories(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Mobile section with collapsible entries
-  const MobileSection = ({
+  const getEntryBalance = (entry: BalanceEntry) => {
+    return entry.finalDebit - entry.finalCredit;
+  };
+
+  // Odoo-style collapsible section
+  const OdooSection = ({
     title,
     entries,
     total,
     sectionKey,
-    colorClass,
   }: {
     title: string;
     entries: BalanceEntry[];
     total: number;
     sectionKey: string;
-    colorClass: string;
   }) => {
     const isExpanded = expandedSections[sectionKey];
+    const subcategoryGroups = groupBySubcategory(entries);
+
     return (
-      <Card className="overflow-hidden hover-lift animated-border transition-smooth">
+      <div className="mb-2">
+        {/* Main category header */}
         <button
           onClick={() => toggleSection(sectionKey)}
-          className={cn(
-            'w-full flex items-center justify-between p-4',
-            colorClass
-          )}
+          className="w-full flex items-center justify-between py-2.5 px-3 sm:px-4 bg-muted/60 hover:bg-muted/80 transition-colors"
         >
-          <span className="font-heading font-semibold">{title}</span>
-          <div className="flex items-center gap-3">
-            <span className="font-heading font-bold">{formatCurrencyCompact(total)}</span>
+          <div className="flex items-center gap-2">
             {isExpanded ? (
-              <ChevronUp className="h-4 w-4" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             ) : (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             )}
+            <span className="font-heading font-bold text-sm sm:text-base text-foreground uppercase">{title}</span>
           </div>
         </button>
+
         {isExpanded && (
-          <CardContent className="pt-0 px-4 pb-4">
-            {entries.map(entry => (
-              <MobileEntryCard key={entry.id} entry={entry} />
-            ))}
-          </CardContent>
+          <div>
+            {Object.entries(subcategoryGroups).map(([subKey, subEntries]) => {
+              const subTotal = subEntries.reduce((sum, e) => sum + getEntryBalance(e), 0);
+              const fullKey = `${sectionKey}-${subKey}`;
+              const isSubExpanded = expandedSubcategories[fullKey] !== false; // default open
+
+              return (
+                <div key={subKey}>
+                  {/* Subcategory header */}
+                  <button
+                    onClick={() => toggleSubcategory(fullKey)}
+                    className="w-full flex items-center justify-between py-2 px-3 pl-6 sm:px-4 sm:pl-8 hover:bg-muted/30 transition-colors border-b border-border/50"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      {isSubExpanded ? (
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      )}
+                      <span className="font-semibold text-xs sm:text-sm text-foreground truncate">
+                        {getSubcategoryLabel(subKey)}
+                      </span>
+                    </div>
+                    <span className="font-mono text-xs sm:text-sm text-foreground flex-shrink-0 ml-2">
+                      {formatCurrency(Math.abs(subTotal))}
+                    </span>
+                  </button>
+
+                  {/* Individual entries */}
+                  {isSubExpanded && subEntries.map(entry => {
+                    const balance = getEntryBalance(entry);
+                    return (
+                      <div
+                        key={entry.id}
+                        className="flex items-center justify-between py-2 px-3 pl-10 sm:px-4 sm:pl-16 border-b border-border/30 hover:bg-muted/20 transition-colors"
+                      >
+                        <span className="text-xs sm:text-sm text-foreground truncate min-w-0 flex-1">{entry.accountName}</span>
+                        <span className="font-mono text-xs sm:text-sm text-foreground flex-shrink-0 ml-2">
+                          {formatCurrency(Math.abs(balance))}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+
+            {/* Category total */}
+            <div className="flex items-center justify-between py-2.5 px-3 sm:px-4 bg-muted/40 border-y border-border font-bold">
+              <span className="text-xs sm:text-sm text-foreground pl-2 sm:pl-4">Total {title}</span>
+              <span className="font-mono text-xs sm:text-sm text-foreground">{formatCurrency(total)}</span>
+            </div>
+          </div>
         )}
-      </Card>
+      </div>
     );
   };
 
-  const TableHeader = () => (
-    <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
-      <tr className="text-xs font-semibold text-foreground uppercase tracking-wide">
-        <th className="text-left py-3 px-4 border-b">Código</th>
-        <th className="text-left py-3 px-4 border-b">Nombre de Cuenta</th>
-        <th className="text-right py-3 px-4 border-b">Inicial (Db)</th>
-        <th className="text-right py-3 px-4 border-b">Inicial (Cr)</th>
-        <th className="text-right py-3 px-4 border-b">Período (Db)</th>
-        <th className="text-right py-3 px-4 border-b">Período (Cr)</th>
-        <th className="text-right py-3 px-4 border-b">Final (Db)</th>
-        <th className="text-right py-3 px-4 border-b">Final (Cr)</th>
-      </tr>
-    </thead>
-  );
-
-  const renderEntryRow = (entry: BalanceEntry) => (
-    <tr key={entry.id} className="hover:bg-muted/30 transition-colors text-sm">
-      <td className="py-2.5 px-4 font-mono text-muted-foreground">{entry.accountCode}</td>
-      <td className="py-2.5 px-4">{entry.accountName}</td>
-      <td className="py-2.5 px-4 text-right font-mono">{entry.initialDebit > 0 ? formatCurrency(entry.initialDebit) : '—'}</td>
-      <td className="py-2.5 px-4 text-right font-mono">{entry.initialCredit > 0 ? formatCurrency(entry.initialCredit) : '—'}</td>
-      <td className="py-2.5 px-4 text-right font-mono">{entry.periodDebit > 0 ? formatCurrency(entry.periodDebit) : '—'}</td>
-      <td className="py-2.5 px-4 text-right font-mono">{entry.periodCredit > 0 ? formatCurrency(entry.periodCredit) : '—'}</td>
-      <td className="py-2.5 px-4 text-right font-mono font-medium">{entry.finalDebit > 0 ? formatCurrency(entry.finalDebit) : '—'}</td>
-      <td className="py-2.5 px-4 text-right font-mono font-medium">{entry.finalCredit > 0 ? formatCurrency(entry.finalCredit) : '—'}</td>
-    </tr>
-  );
-
-  const renderSubtotal = (label: string, debit: number, credit: number) => (
-    <tr className="bg-muted/50 font-medium text-sm">
-      <td colSpan={6} className="py-2.5 px-4 text-right">{label}</td>
-      <td className="py-2.5 px-4 text-right font-mono">{debit > 0 ? formatCurrency(debit) : '—'}</td>
-      <td className="py-2.5 px-4 text-right font-mono">{credit > 0 ? formatCurrency(credit) : '—'}</td>
-    </tr>
-  );
-
   return (
-    <AppLayout title="Balance General" subtitle={`Balance de comprobación de 8 columnas para ${formatPeriod()}`}>
-      <div className="space-y-4 md:space-y-6">
+    <AppLayout title="Balance General" subtitle={`Balance para ${formatPeriod()}`}>
+      <div id="balance-sheet-content" className="space-y-4 md:space-y-6">
         {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-slide-up">
-          <div className="flex items-center gap-3">
-            {isBalanced ? (
-              <div className="flex items-center gap-2 text-success bg-success/10 px-3 py-1.5 rounded-lg animate-pulse-subtle">
-                <CheckCircle className="h-4 w-4" />
-                <span className="text-sm font-medium">Cuadrado</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-destructive bg-destructive/10 px-3 py-1.5 rounded-lg">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-xs sm:text-sm font-medium">Descuadrado</span>
-              </div>
-            )}
-          </div>
+        <div className="flex items-center justify-end gap-2 animate-slide-up">
           <Button
             variant="outline"
             size="sm"
-            className="self-start sm:self-auto"
             onClick={handleExport}
             disabled={isExporting || isLoading}
           >
@@ -243,171 +267,72 @@ export default function BalanceSheet() {
             ) : (
               <Download className="h-4 w-4 mr-2" />
             )}
-            <span className="hidden sm:inline">Exportar a Excel</span>
-            <span className="sm:hidden">Exportar</span>
+            <span className="hidden sm:inline">Excel</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf || isLoading}
+          >
+            {isExportingPdf ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <FileText className="h-4 w-4 mr-2" />
+            )}
+            <span className="hidden sm:inline">PDF</span>
           </Button>
         </div>
 
-        {/* Summary Cards - Moved to Top */}
-        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-3 animate-stagger">
-          <Card className="bg-primary/5 border-primary/20 hover-lift animated-border transition-smooth">
-            <CardContent className="pt-4 md:pt-5 px-4 md:px-6">
-              <p className="text-xs md:text-sm text-muted-foreground">Total Activos</p>
-              <p className="font-heading text-xl md:text-2xl font-bold text-foreground mt-1">
-                {isMobile ? formatCurrencyCompact(totalAssets) : formatCurrency(totalAssets)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-chart-2/5 border-chart-2/20 hover-lift animated-border transition-smooth">
-            <CardContent className="pt-4 md:pt-5 px-4 md:px-6">
-              <p className="text-xs md:text-sm text-muted-foreground">Total Pasivos</p>
-              <p className="font-heading text-xl md:text-2xl font-bold text-foreground mt-1">
-                {isMobile ? formatCurrencyCompact(totalLiabilities) : formatCurrency(totalLiabilities)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-chart-4/5 border-chart-4/20 hover-lift animated-border transition-smooth">
-            <CardContent className="pt-4 md:pt-5 px-4 md:px-6">
-              <p className="text-xs md:text-sm text-muted-foreground">Total Patrimonio</p>
-              <p className="font-heading text-xl md:text-2xl font-bold text-foreground mt-1">
-                {isMobile ? formatCurrencyCompact(totalEquity) : formatCurrency(totalEquity)}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Odoo-style Balance Sheet */}
+        <Card className="animate-slide-up overflow-hidden">
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div>
+                {/* Header */}
+                <div className="text-right py-3 px-3 sm:px-4 border-b bg-muted/30">
+                  <span className="text-xs sm:text-sm font-medium text-muted-foreground">{formatPeriod()}</span>
+                  <br />
+                  <span className="text-xs sm:text-sm font-bold text-foreground">Balance</span>
+                </div>
 
-        {/* Mobile View: Collapsible Cards */}
-        {isMobile && (
-          <div className="space-y-3 animate-stagger">
-            <MobileSection
-              title="ACTIVOS"
-              entries={assetEntries}
-              total={totalAssets}
-              sectionKey="assets"
-              colorClass="bg-primary/5 text-primary"
-            />
-            <MobileSection
-              title="PASIVOS"
-              entries={liabilityEntries}
-              total={totalLiabilities}
-              sectionKey="liabilities"
-              colorClass="bg-chart-2/10 text-chart-2"
-            />
-            <MobileSection
-              title="PATRIMONIO"
-              entries={equityEntries}
-              total={totalEquity}
-              sectionKey="equity"
-              colorClass="bg-chart-4/10 text-chart-4"
-            />
+                {/* ACTIVOS */}
+                <OdooSection
+                  title="ACTIVOS"
+                  entries={assetEntries}
+                  total={totalAssets}
+                  sectionKey="assets"
+                />
 
-            {/* Mobile Grand Total */}
-            <Card className="bg-muted/50">
-              <CardContent className="py-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-foreground">Pasivo + Patrimonio</span>
-                  <span className="font-heading text-lg font-bold text-foreground">
-                    {formatCurrencyCompact(totalLiabilities + totalEquity)}
+                {/* PASIVOS */}
+                <OdooSection
+                  title="PASIVOS"
+                  entries={liabilityEntries}
+                  total={totalLiabilities}
+                  sectionKey="liabilities"
+                />
+
+                {/* CAPITAL */}
+                <OdooSection
+                  title="CAPITAL"
+                  entries={equityEntries}
+                  total={totalEquity}
+                  sectionKey="equity"
+                />
+
+                {/* Grand Total */}
+                <div className="flex items-center justify-between py-3 px-3 sm:px-4 bg-foreground/5 border-t-2 border-foreground/20 font-bold">
+                  <span className="text-xs sm:text-sm text-foreground">Total PASIVOS + CAPITAL</span>
+                  <span className="font-mono text-xs sm:text-sm text-foreground">
+                    {formatCurrency(totalLiabilities + totalEquity)}
                   </span>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Desktop View: Full Table */}
-        {!isMobile && (
-          <Card className="animate-slide-up animated-border" style={{ animationDelay: '0.1s' }}>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto scrollbar-thin">
-                <table className="w-full min-w-[900px]">
-                  <TableHeader />
-                  <tbody>
-                    {/* Assets Section */}
-                    <tr className="bg-primary/5">
-                      <td colSpan={8} className="py-2 px-4 font-heading font-semibold text-primary">
-                        ACTIVOS
-                      </td>
-                    </tr>
-                    {assetEntries.map(renderEntryRow)}
-                    {renderSubtotal('Total Activos', totalAssets, 0)}
-
-                    {/* Liabilities Section */}
-                    <tr className="bg-chart-2/5">
-                      <td colSpan={8} className="py-2 px-4 font-heading font-semibold text-chart-2">
-                        PASIVOS
-                      </td>
-                    </tr>
-                    {liabilityEntries.map(renderEntryRow)}
-                    {renderSubtotal('Total Pasivos', 0, totalLiabilities)}
-
-                    {/* Equity Section */}
-                    <tr className="bg-chart-4/5">
-                      <td colSpan={8} className="py-2 px-4 font-heading font-semibold text-chart-4">
-                        PATRIMONIO
-                      </td>
-                    </tr>
-                    {equityEntries.map(renderEntryRow)}
-                    {renderSubtotal('Total Patrimonio', 0, totalEquity)}
-
-                    {/* Grand Totals */}
-                    <tr className="bg-foreground/5 font-bold text-sm border-t-2 border-foreground/20">
-                      <td colSpan={6} className="py-3 px-4 text-right">Total Pasivo + Patrimonio</td>
-                      <td className="py-3 px-4 text-right font-mono">—</td>
-                      <td className="py-3 px-4 text-right font-mono">{formatCurrency(totalLiabilities + totalEquity)}</td>
-                    </tr>
-                  </tbody>
-                </table>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Educational Info Card - Comprehend the Balance Sheet */}
-        <Card className="bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 animate-slide-up">
-          <CardHeader className="pb-3 md:pb-4">
-            <div className="flex items-center gap-2">
-              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <CardTitle className="text-base md:text-lg font-heading text-blue-900 dark:text-blue-100">
-                Comprende tu Balance General
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="space-y-1">
-                <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100 flex items-center gap-1.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-xs text-primary">1</span>
-                  Activos
-                </h4>
-                <p className="text-xs md:text-sm text-blue-700 dark:text-blue-300">
-                  Son los bienes y derechos que posee la cooperativa: dinero en caja, cuentas por cobrar, inventarios, equipos, etc.
-                </p>
-              </div>
-              <div className="space-y-1">
-                <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100 flex items-center gap-1.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-chart-2/20 text-xs text-chart-2">2</span>
-                  Pasivos
-                </h4>
-                <p className="text-xs md:text-sm text-blue-700 dark:text-blue-300">
-                  Son las obligaciones y deudas de la cooperativa: proveedores, préstamos bancarios, impuestos por pagar, etc.
-                </p>
-              </div>
-              <div className="space-y-1">
-                <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100 flex items-center gap-1.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-chart-4/20 text-xs text-chart-4">3</span>
-                  Patrimonio
-                </h4>
-                <p className="text-xs md:text-sm text-blue-700 dark:text-blue-300">
-                  Es el capital aportado por los socios y las ganancias acumuladas. Representa la parte de los activos que realmente pertenece a la cooperativa.
-                </p>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-blue-200 dark:border-blue-800">
-              <p className="text-xs md:text-sm font-medium text-blue-900 dark:text-blue-100">
-                <strong>Ecuación fundamental:</strong> Activos = Pasivos + Patrimonio. Esta ecuación siempre debe estar balanceada.
-              </p>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

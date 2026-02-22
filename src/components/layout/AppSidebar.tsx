@@ -40,6 +40,7 @@ const adminNavItems = [
   { to: '/balance-sheet', label: 'Balance General', icon: FileSpreadsheet },
   { to: '/cash-flow', label: 'Flujo de Caja', icon: TrendingUp },
   { to: '/membership-fees', label: 'Cuotas de Socios', icon: DollarSign },
+  { to: '/cooperative-fees', label: 'Cuotas Cooperativa', icon: Users },
   { to: '/financial-ratios', label: 'Ratios Financieros', icon: PieChart },
   { to: '/users', label: 'Usuarios y Roles', icon: Users },
   { to: '/notifications', label: 'Notificaciones', icon: Bell },
@@ -52,6 +53,7 @@ const socioNavItems = [
   { to: '/balance-sheet', label: 'Balance General', icon: FileSpreadsheet },
   { to: '/cash-flow', label: 'Flujo de Caja', icon: TrendingUp },
   { to: '/membership-fees', label: 'Cuotas de Socios', icon: DollarSign },
+  { to: '/cooperative-fees', label: 'Cuotas Cooperativa', icon: Users },
   { to: '/financial-ratios', label: 'Ratios Financieros', icon: PieChart },
   { to: '/profile', label: 'Mi Perfil', icon: User },
 ];
